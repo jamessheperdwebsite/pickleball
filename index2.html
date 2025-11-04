@@ -1,0 +1,3013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pickleball Club Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        [v-cloak] { display: none; }
+        
+        /* David Lloyd Purple Color Scheme */
+        :root {
+            --dl-purple: #4B1F60;
+            --dl-light-purple: #7B3FAA;
+            --accent-gold: #FFD700;
+            --accent-pink: #FF6B9D;
+            --charcoal-gray: #333333;
+            --soft-light-gray: #F0F4F8;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #17A2B8 0%, #20B2AA 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(91, 42, 134, 0.2), 0 10px 10px -5px rgba(91, 42, 134, 0.1);
+        }
+
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--dl-purple) 0%, var(--dl-light-purple) 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(91, 42, 134, 0.4);
+        }
+
+        .btn-coral {
+            background: linear-gradient(135deg, var(--accent-pink) 0%, #FF5082 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-coral:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(255, 107, 157, 0.4);
+        }
+        
+        .table-modern {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .nav-tab {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tab::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: linear-gradient(135deg, var(--dl-purple) 0%, var(--dl-light-purple) 100%);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .nav-tab.active::after {
+            width: 100%;
+        }
+
+        .schedule-card {
+            background: linear-gradient(135deg, var(--dl-purple) 0%, var(--dl-light-purple) 100%);
+            color: white;
+        }
+
+        .completed-card {
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #FFB300 100%);
+            color: var(--charcoal-gray);
+        }
+
+        .rating-badge {
+            background: linear-gradient(135deg, var(--dl-purple) 0%, var(--dl-light-purple) 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .coral-badge {
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #FFB300 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .yellow-badge {
+            background: linear-gradient(135deg, var(--accent-pink) 0%, #FF5082 100%);
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak class="min-h-screen" style="background-color: var(--soft-light-gray);">
+        <!-- Header -->
+        <div class="gradient-bg text-white shadow-2xl">
+            <div class="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
+                <div class="flex items-center justify-center flex-1">
+                    <img src="PICK.png" alt="David Lloyd Coventry Pickleball Social" class="h-24 md:h-32">
+                </div>
+                <div class="flex gap-3">
+                    <button v-if="!isAdmin" @click="showAdminLogin = true" class="bg-white bg-opacity-20 px-6 py-2 rounded-xl hover:bg-opacity-30 transition-all duration-300 font-medium backdrop-blur-sm">
+                        Admin Login
+                    </button>
+                    <button v-if="isAdmin" @click="logout" class="btn-coral px-6 py-2 rounded-xl font-medium">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Login Modal -->
+        <div v-if="showAdminLogin" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div class="glass-effect p-8 rounded-2xl shadow-2xl max-w-md w-full m-4 border border-white border-opacity-20">
+                <div class="text-center mb-6">
+                    <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Admin Access</h2>
+                    <p class="text-gray-600">Enter your credentials to continue</p>
+                </div>
+                <input 
+                    v-model="adminPassword" 
+                    type="password" 
+                    placeholder="Enter admin password" 
+                    @keyup.enter="attemptLogin"
+                    class="w-full p-4 border border-gray-200 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                >
+                <div class="flex gap-3">
+                    <button @click="attemptLogin" class="flex-1 btn-primary text-white px-6 py-3 rounded-xl font-medium">
+                        Login
+                    </button>
+                    <button @click="showAdminLogin = false; adminPassword = ''" class="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-300 transition-all duration-300 font-medium">
+                        Cancel
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mt-4 text-center">Default password: <code class="bg-gray-100 px-2 py-1 rounded">admin123</code></p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white bg-opacity-80 backdrop-blur-md shadow-lg border-b border-gray-200">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex overflow-x-auto">
+                    <button 
+                        v-for="tab in availableTabs" 
+                        :key="tab.id"
+                        @click="activeTab = tab.id"
+                        :class="[
+                            'nav-tab px-8 py-4 font-semibold whitespace-nowrap transition-all duration-300 relative',
+                            activeTab === tab.id 
+                                ? 'text-gray-800 active' 
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        ]"
+                    >
+                        {{ tab.name }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="max-w-7xl mx-auto p-6">
+            <!-- League Table -->
+            <div v-if="activeTab === 'league'" class="bg-white rounded-2xl shadow-xl p-8 card-hover">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">League Table</h2>
+                        <p class="text-gray-600">Player rankings and statistics</p>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-2 rounded-xl">
+                        <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700">{{ players.length }} Active Players</span>
+                    </div>
+                </div>
+
+                <!-- Date Filter Buttons -->
+                <div class="flex flex-wrap gap-2 mb-6 items-center">
+                    <button
+                        @click="leagueFilter = 'overall'"
+                        :class="[
+                            'px-4 py-2 rounded-xl font-semibold transition-all duration-300',
+                            leagueFilter === 'overall'
+                                ? 'btn-primary text-white shadow-lg'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ]"
+                    >
+                        Overall
+                    </button>
+                    <button
+                        @click="leagueFilter = 'today'"
+                        :class="[
+                            'px-4 py-2 rounded-xl font-semibold transition-all duration-300',
+                            leagueFilter === 'today'
+                                ? 'btn-primary text-white shadow-lg'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ]"
+                    >
+                        Today
+                    </button>
+                    <button
+                        @click="leagueFilter = 'thisWeek'"
+                        :class="[
+                            'px-4 py-2 rounded-xl font-semibold transition-all duration-300',
+                            leagueFilter === 'thisWeek'
+                                ? 'btn-primary text-white shadow-lg'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ]"
+                    >
+                        This Week
+                    </button>
+                    <button
+                        @click="leagueFilter = 'lastWeek'"
+                        :class="[
+                            'px-4 py-2 rounded-xl font-semibold transition-all duration-300',
+                            leagueFilter === 'lastWeek'
+                                ? 'btn-primary text-white shadow-lg'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ]"
+                    >
+                        Last Week
+                    </button>
+                    <button
+                        @click="leagueFilter = 'thisMonth'"
+                        :class="[
+                            'px-4 py-2 rounded-xl font-semibold transition-all duration-300',
+                            leagueFilter === 'thisMonth'
+                                ? 'btn-primary text-white shadow-lg'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ]"
+                    >
+                        This Month
+                    </button>
+                    <button
+                        @click="leagueFilter = 'lastMonth'"
+                        :class="[
+                            'px-4 py-2 rounded-xl font-semibold transition-all duration-300',
+                            leagueFilter === 'lastMonth'
+                                ? 'btn-primary text-white shadow-lg'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ]"
+                    >
+                        Last Month
+                    </button>
+
+                    <!-- Date Picker -->
+                    <div class="flex items-center gap-2 ml-4">
+                        <span class="text-sm font-medium text-gray-600">or pick a date:</span>
+                        <input
+                            v-model="selectedDate"
+                            @change="leagueFilter = 'customDate'"
+                            type="date"
+                            class="px-3 py-2 border rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                    </div>
+                </div>
+
+                <!-- Tournament Table Viewer -->
+                <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                        </svg>
+                        View Tournament Table
+                    </h3>
+                    <div class="flex items-center gap-3">
+                        <input
+                            v-model="viewTournamentId"
+                            type="text"
+                            placeholder="Enter Tournament ID (e.g., T1234567890)"
+                            class="flex-1 px-4 py-2 border-2 border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        >
+                        <button
+                            @click="showTournamentTable = !showTournamentTable"
+                            :disabled="!viewTournamentId"
+                            class="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-2 rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {{ showTournamentTable ? 'Hide' : 'View' }} Table
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-2">Enter a tournament ID to view the frozen leaderboard for that specific tournament</p>
+                </div>
+
+                <!-- Tournament Table Display -->
+                <div v-if="showTournamentTable && viewTournamentId" class="mb-6">
+                    <template v-if="getTournamentLeaderboard(viewTournamentId)">
+                        <div class="bg-white border-2 border-purple-300 rounded-xl p-6">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-4 flex items-center justify-between">
+                                <span>Tournament Leaderboard</span>
+                                <span :class="[
+                                    'px-3 py-1 rounded-full text-xs font-semibold',
+                                    getTournamentLeaderboard(viewTournamentId).status === 'completed'
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                ]">
+                                    {{ getTournamentLeaderboard(viewTournamentId).status === 'completed' ? 'Completed' : 'Active' }}
+                                </span>
+                            </h3>
+                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <p class="text-xs text-gray-600">Date</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ formatDate(getTournamentLeaderboard(viewTournamentId).date) }}</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <p class="text-xs text-gray-600">Tournament ID</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ getTournamentLeaderboard(viewTournamentId).tournamentId }}</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <p class="text-xs text-gray-600">Notes</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ getTournamentLeaderboard(viewTournamentId).notes || 'No notes' }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Live/Final Standings Table -->
+                            <div class="overflow-x-auto">
+                                <!-- Status Banner for Active Tournaments -->
+                                <div v-if="getTournamentLeaderboard(viewTournamentId).status === 'active'" class="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5 text-blue-600 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <p class="text-blue-800 font-semibold">LIVE STANDINGS - Updates as matches are recorded</p>
+                                    </div>
+                                </div>
+
+                                <table class="w-full">
+                                    <thead class="bg-gradient-to-r from-purple-100 to-pink-100">
+                                        <tr>
+                                            <th class="text-left p-4 font-semibold text-gray-700">Rank</th>
+                                            <th class="text-left p-4 font-semibold text-gray-700">Player</th>
+                                            <th class="text-center p-4 font-semibold text-gray-700">Games</th>
+                                            <th class="text-center p-4 font-semibold text-gray-700">Wins</th>
+                                            <th class="text-center p-4 font-semibold text-gray-700">Losses</th>
+                                            <th class="text-center p-4 font-semibold text-gray-700">Points For</th>
+                                            <th class="text-center p-4 font-semibold text-gray-700">Points Against</th>
+                                            <th class="text-center p-4 font-semibold text-gray-700">Diff</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(player, index) in getLiveTournamentStandings(viewTournamentId)" :key="player.id" class="border-b border-gray-100 hover:bg-purple-50 transition-all">
+                                            <td class="p-4">
+                                                <div class="flex items-center">
+                                                    <div v-if="index < 3" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mr-2" :class="[
+                                                        index === 0 ? 'coral-badge' : '',
+                                                        index === 1 ? 'yellow-badge' : '',
+                                                        index === 2 ? 'rating-badge' : ''
+                                                    ]">
+                                                        {{ index + 1 }}
+                                                    </div>
+                                                    <span v-else class="font-medium text-gray-700">{{ index + 1 }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-4">
+                                                <div class="font-semibold text-gray-800">{{ player.name }}</div>
+                                            </td>
+                                            <td class="text-center p-4 font-medium text-gray-700">{{ player.gamesPlayed }}</td>
+                                            <td class="text-center p-4">
+                                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+                                                    {{ player.wins }}
+                                                </span>
+                                            </td>
+                                            <td class="text-center p-4">
+                                                <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
+                                                    {{ player.losses }}
+                                                </span>
+                                            </td>
+                                            <td class="text-center p-4 font-medium text-gray-700">{{ player.pointsScored }}</td>
+                                            <td class="text-center p-4 font-medium text-gray-700">{{ player.pointsConceded }}</td>
+                                            <td class="text-center p-4">
+                                                <span :class="[
+                                                    'px-2 py-1 rounded-full text-sm font-medium',
+                                                    (player.pointsScored - player.pointsConceded) > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                                                ]">
+                                                    {{ player.pointsScored - player.pointsConceded >= 0 ? '+' : '' }}{{ player.pointsScored - player.pointsConceded }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                            <p class="text-red-800 font-semibold">Tournament ID not found. Please check the ID and try again.</p>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Main League Table -->
+                <h3 v-if="showTournamentTable && viewTournamentId" class="text-xl font-bold text-gray-800 mb-4 mt-8">Overall League Table</h3>
+                <div class="overflow-x-auto table-modern">
+                    <table class="w-full">
+                        <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
+                            <tr>
+                                <th class="text-left p-4 font-semibold text-gray-700">Rank</th>
+                                <th class="text-left p-4 font-semibold text-gray-700">Player</th>
+                                <th class="text-center p-4 font-semibold text-gray-700">Rating</th>
+                                <th class="text-center p-4 font-semibold text-gray-700">Games</th>
+                                <th class="text-center p-4 font-semibold text-gray-700">Wins</th>
+                                <th class="text-center p-4 font-semibold text-gray-700">Losses</th>
+                                <th class="text-center p-4 font-semibold text-gray-700">Win %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(player, index) in filteredLeaguePlayers" :key="player.id" class="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300">
+                                <td class="p-4">
+                                    <div class="flex items-center">
+                                        <div v-if="index < 3" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm mr-2" :class="[
+                                            index === 0 ? 'coral-badge' : '',
+                                            index === 1 ? 'yellow-badge' : '',
+                                            index === 2 ? 'rating-badge' : ''
+                                        ]">
+                                            {{ index + 1 }}
+                                        </div>
+                                        <span v-else class="font-medium text-gray-700">{{ index + 1 }}</span>
+                                    </div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 rating-badge rounded-full flex items-center justify-center text-white font-bold mr-3">
+                                            {{ player.name.charAt(0).toUpperCase() }}
+                                        </div>
+                                        <div>
+                                            <div class="font-semibold text-gray-800">{{ player.name }}</div>
+                                            <div class="text-xs text-gray-500">ID: {{ player.id }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center p-4">
+                                    <span class="rating-badge px-3 py-1 rounded-full text-sm font-bold">
+                                        {{ leagueFilter === 'overall' ? Math.round(player.rating) : Math.round(player.filteredRating) }}
+                                    </span>
+                                </td>
+                                <td class="text-center p-4 font-medium text-gray-700">{{ player.filteredGames }}</td>
+                                <td class="text-center p-4">
+                                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
+                                        {{ player.filteredWins }}
+                                    </span>
+                                </td>
+                                <td class="text-center p-4">
+                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
+                                        {{ player.filteredLosses }}
+                                    </span>
+                                </td>
+                                <td class="text-center p-4">
+                                    <div class="flex items-center justify-center">
+                                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                            <div class="h-2 rounded-full transition-all duration-500" style="background: linear-gradient(135deg, var(--accent-gold) 0%, var(--dl-purple) 100%);" :style="{width: (player.filteredGames > 0 ? (player.filteredWins / player.filteredGames * 100) : 0) + '%'}"></div>
+                                        </div>
+                                        <span class="font-medium text-gray-700">{{ player.filteredGames > 0 ? Math.round(player.filteredWins / player.filteredGames * 100) : 0 }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Schedule View -->
+            <div v-if="activeTab === 'schedule'" class="bg-white rounded-lg shadow p-6">
+                <!-- Today's Tournament Section -->
+                <div v-if="groupedTodaysSchedules.length > 0" class="mb-8">
+                    <div class="flex items-center mb-6">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800">Today's Tournament</h3>
+                            <p class="text-gray-600">Record results by round</p>
+                        </div>
+                    </div>
+
+                    <!-- Tournament Sessions -->
+                    <div v-for="session in groupedTodaysSchedules" :key="session.tournamentId" class="space-y-4 mb-6">
+                        <!-- Session Header -->
+                        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl p-4">
+                            <div class="flex justify-between items-center">
+                                <div class="cursor-pointer flex-1" @click="toggleSessionExpand(session.tournamentId)">
+                                    <h4 class="text-xl font-bold">{{ formatDate(session.date) }} Tournament{{ session.notes ? ' - ' + session.notes : '' }}</h4>
+                                    <p class="text-sm opacity-90">{{ session.rounds.length }} rounds to record</p>
+                                    <p class="text-xs opacity-75 mt-1">
+                                        <span class="font-semibold">Tournament ID:</span>
+                                        <span class="font-mono bg-white bg-opacity-20 px-2 py-0.5 rounded">{{ session.tournamentId }}</span>
+                                        <span v-if="!session.tournamentId || session.tournamentId === session.date" class="ml-2 bg-yellow-500 text-yellow-900 px-2 py-0.5 rounded text-xs font-semibold">Old Format</span>
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button @click.stop="viewTournamentId = session.tournamentId; showTournamentTable = true; activeTab = 'league'" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                                        View Leaderboard
+                                    </button>
+                                    <button @click.stop="deleteTournament(session.tournamentId)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                                        Delete
+                                    </button>
+                                    <button @click="toggleSessionExpand(session.tournamentId)" class="text-2xl">
+                                        {{ expandedSessions[session.tournamentId] ? '▼' : '▶' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Session Rounds -->
+                        <div v-if="expandedSessions[session.tournamentId]" class="space-y-3 ml-4">
+                            <div v-for="round in session.rounds" :key="round.roundNumber" class="border-l-4 border-purple-400 pl-4">
+                                <!-- Round Header -->
+                                <div class="bg-gray-100 rounded-lg p-3 cursor-pointer mb-2" @click="toggleRoundExpand(session.tournamentId + '-' + round.roundNumber)">
+                                    <div class="flex justify-between items-center">
+                                        <div class="flex items-center gap-3">
+                                            <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                                Round {{ round.roundNumber }}
+                                            </span>
+                                            <span class="text-sm text-gray-600">{{ round.matches.length}} matches</span>
+                                        </div>
+                                        <button class="text-purple-600 font-bold">
+                                            {{ expandedRounds[session.tournamentId + '-' + round.roundNumber] ? '▼' : '▶' }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Round Matches -->
+                                <div v-if="expandedRounds[session.tournamentId + '-' + round.roundNumber]" class="space-y-2 ml-4">
+                                    <div v-for="match in round.matches" :key="match.id" class="bg-white border rounded-lg p-4 shadow-sm">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <div class="flex items-center gap-3">
+                                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
+                                                    Court {{ match.court }}
+                                                </span>
+                                                <span class="font-medium text-sm">{{ getTeamNames(match.teamA) }} vs {{ getTeamNames(match.teamB) }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Score Input -->
+                                        <div class="flex items-center gap-3">
+                                            <input
+                                                :value="getRoundScore(match.id, 1, 'A')"
+                                                @input="updateRoundScore(match.id, 1, 'A', $event.target.value)"
+                                                type="number"
+                                                min="0"
+                                                placeholder="Score"
+                                                class="w-20 p-2 border rounded text-gray-800"
+                                            >
+                                            <span class="font-bold">-</span>
+                                            <input
+                                                :value="getRoundScore(match.id, 1, 'B')"
+                                                @input="updateRoundScore(match.id, 1, 'B', $event.target.value)"
+                                                type="number"
+                                                min="0"
+                                                placeholder="Score"
+                                                class="w-20 p-2 border rounded text-gray-800"
+                                            >
+                                            <button
+                                                v-if="getRoundScore(match.id, 1, 'A') !== '' && getRoundScore(match.id, 1, 'B') !== ''"
+                                                @click="saveRoundMatch(match)"
+                                                class="btn-primary text-white px-4 py-2 rounded-lg text-sm"
+                                            >
+                                                ✓ Save
+                                            </button>
+                                            <span v-if="isRoundSaved(match.id, 1)" class="text-green-600 font-semibold">✓ Saved</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- End Tournament Button -->
+                        <div v-if="expandedSessions[session.tournamentId]" class="ml-4 mt-6">
+                            <button @click="endTournament(session.tournamentId)" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg transition-all">
+                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                End Tournament
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Completed Matches -->
+                    <div v-if="completedTodaysMatches.length > 0">
+                        <p class="text-sm font-medium text-gray-600 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            Completed Today
+                        </p>
+                        <div class="space-y-3">
+                            <div v-for="schedule in completedTodaysMatches" :key="schedule.id" class="completed-card rounded-2xl p-4">
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-semibold">
+                                            Court {{ schedule.court }}
+                                        </div>
+                                        <div class="font-semibold">
+                                            {{ getTeamNames(schedule.teamA) }} <span class="mx-2 opacity-75">vs</span> {{ getTeamNames(schedule.teamB) }}
+                                        </div>
+                                    </div>
+                                    <div class="bg-white bg-opacity-20 px-4 py-2 rounded-xl text-sm font-semibold flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        Recorded
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Schedules Section -->
+                <div>
+                    <h2 class="text-xl font-bold mb-4">Upcoming Schedule</h2>
+                    <div v-if="schedules.length === 0" class="text-gray-500">
+                        No schedules available yet.
+                    </div>
+                    <div v-else class="space-y-4">
+                        <div v-for="schedule in upcomingSchedules" :key="schedule.id" class="border rounded-lg p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-lg">{{ formatDate(schedule.date) }}</h3>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">Court {{ schedule.court }}</span>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <p class="font-medium text-gray-600 mb-1">Team A</p>
+                                    <p>{{ getTeamNames(schedule.teamA) }}</p>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-600 mb-1">Team B</p>
+                                    <p>{{ getTeamNames(schedule.teamB) }}</p>
+                                </div>
+                            </div>
+                            <p v-if="schedule.notes" class="text-gray-600 text-sm mt-2">{{ schedule.notes }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match History -->
+            <div v-if="activeTab === 'history'" class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold mb-4">Match History</h2>
+                <div v-if="matches.length === 0" class="text-gray-500">
+                    No matches recorded yet.
+                </div>
+                <div v-else class="space-y-3">
+                    <div v-for="match in recentMatches" :key="match.id" class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start mb-2 cursor-pointer" @click="toggleMatchExpand(match.id)">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-600">{{ formatDate(match.date) }}</span>
+                                <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">{{ match.format }}</span>
+                                <span v-if="match.rounds && Object.keys(match.rounds).length > 1" class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                                    {{ Object.keys(match.rounds).length }} Rounds
+                                </span>
+                            </div>
+                            <button class="text-gray-500 hover:text-gray-700">
+                                {{ expandedMatches[match.id] ? '▼' : '▶' }}
+                            </button>
+                        </div>
+                        <div class="grid md:grid-cols-3 gap-4 items-center">
+                            <div>
+                                <p class="text-sm text-gray-600">Team A</p>
+                                <p class="font-medium">{{ getTeamNames(match.teamA) }}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold">
+                                    <span :class="match.winner === 'A' ? 'text-green-600' : ''">{{ match.scoreA }}</span>
+                                    -
+                                    <span :class="match.winner === 'B' ? 'text-green-600' : ''">{{ match.scoreB }}</span>
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-600">Team B</p>
+                                <p class="font-medium">{{ getTeamNames(match.teamB) }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Round Breakdown -->
+                        <div v-if="expandedMatches[match.id] && match.rounds && Object.keys(match.rounds).length > 0" class="mt-4 pt-4 border-t">
+                            <h4 class="font-semibold text-sm text-gray-700 mb-2">Round Breakdown:</h4>
+                            <div class="space-y-1">
+                                <div v-for="(roundData, roundNum) in match.rounds" :key="roundNum" class="flex justify-between items-center bg-gray-50 px-3 py-2 rounded">
+                                    <span class="text-sm font-medium text-gray-600">Round {{ roundNum }}:</span>
+                                    <span class="text-sm font-bold">
+                                        <span :class="roundData.A > roundData.B ? 'text-green-600' : 'text-gray-700'">{{ roundData.A }}</span>
+                                        -
+                                        <span :class="roundData.B > roundData.A ? 'text-green-600' : 'text-gray-700'">{{ roundData.B }}</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="match.processed" class="mt-2">
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Ratings Updated</span>
+                        </div>
+                        <div v-if="match.notes" class="mt-2">
+                            <span class="text-xs text-gray-600">Note: {{ match.notes }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin: Players Management -->
+            <div v-if="activeTab === 'players' && isAdmin" class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Manage Players</h2>
+                    <button @click="showAddPlayer = true" class="btn-primary text-white px-6 py-3 rounded-xl font-semibold shadow-lg">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Add Player
+                    </button>
+                </div>
+
+                <!-- Add Player Form -->
+                <div v-if="showAddPlayer" class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h3 class="font-bold mb-2">Add New Player</h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <input v-model="newPlayer.name" placeholder="Player Name" class="p-2 border rounded">
+                        <input v-model.number="newPlayer.rating" placeholder="Rating (default 200)" class="p-2 border rounded">
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <button @click="addPlayer" class="btn-primary text-white px-6 py-3 rounded-xl font-semibold">
+                            Save Player
+                        </button>
+                        <button @click="cancelAddPlayer" class="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-300 font-semibold transition-all duration-300">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Players List -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left p-2">ID</th>
+                                <th class="text-left p-2">Name</th>
+                                <th class="text-center p-2">Rating</th>
+                                <th class="text-center p-2">Games</th>
+                                <th class="text-center p-2">W-L</th>
+                                <th class="text-center p-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="player in players" :key="player.id" class="border-b hover:bg-gray-50">
+                                <td class="p-2 font-mono text-sm">{{ player.id }}</td>
+                                <td class="p-2">{{ player.name }}</td>
+                                <td class="text-center p-2">{{ Math.round(player.rating) }}</td>
+                                <td class="text-center p-2">{{ player.gamesPlayed }}</td>
+                                <td class="text-center p-2">{{ player.wins }}-{{ player.losses }}</td>
+                                <td class="text-center p-2">
+                                    <button @click="editPlayer(player)" class="text-blue-600 hover:underline mr-2">Edit</button>
+                                    <button @click="deletePlayer(player.id)" class="text-red-600 hover:underline">Delete</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Admin: Generate Schedule -->
+            <div v-if="activeTab === 'scheduler' && isAdmin" class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">Generate Schedule</h2>
+                    <button @click="showManualMatch = true" class="btn-coral text-white px-6 py-3 rounded-xl font-semibold shadow-lg">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Create Match
+                    </button>
+                </div>
+
+                <!-- Manual Match Creation Form -->
+                <div v-if="showManualMatch" class="bg-gray-50 border-2 border-gray-200 rounded-xl p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">Create Manual Match</h3>
+                        <button @click="cancelManualMatch" class="text-gray-500 hover:text-gray-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Match Format -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Match Format</label>
+                            <select v-model="manualMatch.format" @change="resetManualMatchPlayers" class="w-full p-2 border rounded">
+                                <option value="singles">Singles (1v1)</option>
+                                <option value="doubles">Doubles (2v2)</option>
+                                <option value="2v1">2v1</option>
+                            </select>
+                        </div>
+
+                        <!-- Date -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Date</label>
+                            <input v-model="manualMatch.date" type="date" class="w-full p-2 border rounded">
+                        </div>
+
+                        <!-- Court -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Court Number</label>
+                            <input v-model.number="manualMatch.court" type="number" min="1" class="w-full p-2 border rounded">
+                        </div>
+
+                        <!-- Number of Games -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Games per Match</label>
+                            <input v-model.number="manualMatch.rounds" type="number" min="1" max="20" class="w-full p-2 border rounded" placeholder="e.g., 3">
+                            <p class="text-xs text-gray-500 mt-1">Number of games this matchup plays (e.g., best of 3)</p>
+                        </div>
+
+                        <!-- Player Selection -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Team A</label>
+                                <select
+                                    v-if="manualMatch.format === 'singles' || (manualMatch.format === '2v1' && manualMatch.teamA.length === 1)"
+                                    v-model="manualMatch.teamA[0]"
+                                    class="w-full p-2 border rounded mb-2"
+                                >
+                                    <option value="">Select Player</option>
+                                    <option v-for="player in players" :key="player.id" :value="player.id">
+                                        {{ player.name }} ({{ Math.round(player.rating) }})
+                                    </option>
+                                </select>
+                                <div v-else class="space-y-2">
+                                    <select v-model="manualMatch.teamA[0]" class="w-full p-2 border rounded">
+                                        <option value="">Select Player 1</option>
+                                        <option v-for="player in players" :key="player.id" :value="player.id">
+                                            {{ player.name }} ({{ Math.round(player.rating) }})
+                                        </option>
+                                    </select>
+                                    <select v-model="manualMatch.teamA[1]" class="w-full p-2 border rounded">
+                                        <option value="">Select Player 2</option>
+                                        <option v-for="player in players" :key="player.id" :value="player.id">
+                                            {{ player.name }} ({{ Math.round(player.rating) }})
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Team B</label>
+                                <select
+                                    v-if="manualMatch.format === 'singles' || (manualMatch.format === '2v1' && manualMatch.teamB.length === 1)"
+                                    v-model="manualMatch.teamB[0]"
+                                    class="w-full p-2 border rounded mb-2"
+                                >
+                                    <option value="">Select Player</option>
+                                    <option v-for="player in players" :key="player.id" :value="player.id">
+                                        {{ player.name }} ({{ Math.round(player.rating) }})
+                                    </option>
+                                </select>
+                                <div v-else class="space-y-2">
+                                    <select v-model="manualMatch.teamB[0]" class="w-full p-2 border rounded">
+                                        <option value="">Select Player 1</option>
+                                        <option v-for="player in players" :key="player.id" :value="player.id">
+                                            {{ player.name }} ({{ Math.round(player.rating) }})
+                                        </option>
+                                    </select>
+                                    <select v-model="manualMatch.teamB[1]" class="w-full p-2 border rounded">
+                                        <option value="">Select Player 2</option>
+                                        <option v-for="player in players" :key="player.id" :value="player.id">
+                                            {{ player.name }} ({{ Math.round(player.rating) }})
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Notes (Optional)</label>
+                            <input v-model="manualMatch.notes" type="text" class="w-full p-2 border rounded" placeholder="e.g., Championship match">
+                        </div>
+
+                        <!-- Save Button -->
+                        <button @click="saveManualMatch" class="w-full btn-primary text-white py-3 rounded-xl font-semibold">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Save Match to Schedule
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Match Format -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Match Format</label>
+                        <select v-model="scheduleGenerator.format" class="w-full p-2 border rounded">
+                            <option value="singles">Singles</option>
+                            <option value="doubles">Doubles</option>
+                            <option value="2v1">2v1</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Date Selection -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Schedule Date</label>
+                        <input v-model="scheduleGenerator.date" type="date" class="w-full p-2 border rounded">
+                    </div>
+
+                    <!-- Number of Courts -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Number of Courts Available</label>
+                        <input v-model.number="scheduleGenerator.courts" type="number" min="1" class="w-full p-2 border rounded">
+                    </div>
+
+                    <!-- Number of Games per Match -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Games per Match</label>
+                        <input v-model.number="scheduleGenerator.rounds" type="number" min="1" max="20" class="w-full p-2 border rounded" placeholder="e.g., 3">
+                        <p class="text-xs text-gray-500 mt-1">Number of games each matchup plays (e.g., best of 3)</p>
+                    </div>
+
+                    <!-- Player Selection -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Available Players</label>
+                        <div class="border rounded p-3 max-h-48 overflow-y-auto">
+                            <label v-for="player in players" :key="player.id" class="flex items-center p-1 hover:bg-gray-50">
+                                <input 
+                                    type="checkbox" 
+                                    :value="player.id" 
+                                    v-model="scheduleGenerator.availablePlayers"
+                                    class="mr-2"
+                                >
+                                <span>{{ player.name }} ({{ Math.round(player.rating) }})</span>
+                            </label>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Selected: {{ scheduleGenerator.availablePlayers.length }} players</p>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Notes (Optional)</label>
+                        <input v-model="scheduleGenerator.notes" type="text" class="w-full p-2 border rounded" placeholder="e.g., Week 5 matches">
+                    </div>
+
+                    <!-- Tournament Rounds -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Tournament Rounds (Optional)</label>
+                        <input v-model.number="scheduleGenerator.tournamentRounds" type="number" min="1" max="20" class="w-full p-2 border rounded" placeholder="e.g., 10">
+                        <p class="text-xs text-gray-500 mt-1">Generate multiple rounds with rotating partners (leave blank for single round)</p>
+                    </div>
+
+                    <!-- Keep Same Pairings -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input v-model="scheduleGenerator.keepSamePairings" type="checkbox" class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
+                            <span class="ml-3">
+                                <span class="block text-sm font-medium text-gray-800">Keep Same Pairings Throughout Tournament</span>
+                                <span class="block text-xs text-gray-600 mt-1">Partners stay together for all rounds, only opponents change</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Generate Buttons -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <button @click="generateSchedule" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Single Round
+                        </button>
+                        <button @click="generateTournament" class="bg-gradient-to-r from-purple-500 to-pink-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                            </svg>
+                            Multi-Round Tournament
+                        </button>
+                    </div>
+
+                    <!-- Preview Generated Schedule -->
+                    <div v-if="generatedSchedule.length > 0" class="mt-6">
+                        <h3 class="font-bold mb-3">Preview & Edit Generated Schedule</h3>
+                        <div class="space-y-3 mb-4">
+                            <div v-for="(match, index) in generatedSchedule" :key="index" class="border rounded p-4 bg-gray-50">
+                                <div class="flex justify-between items-center mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <span v-if="match.roundNumber" class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                            Round {{ match.roundNumber }}
+                                        </span>
+                                        <span class="font-medium">Court {{ match.court }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span v-if="match.sitOuts && match.sitOuts.length > 0" class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                            Sit: {{ match.sitOuts.map(s => s.name).join(', ') }}
+                                        </span>
+                                        <span class="text-sm text-gray-600">{{ match.format }}</span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Team A</label>
+                                        <select
+                                            v-if="match.format === 'singles' || match.format === '2v1' && match.teamA.length === 1"
+                                            v-model="match.teamA[0]"
+                                            class="w-full p-2 border rounded"
+                                        >
+                                            <option v-for="player in players" :key="player.id" :value="player.id">
+                                                {{ player.name }} ({{ Math.round(player.rating) }})
+                                            </option>
+                                        </select>
+                                        <div v-else class="space-y-2">
+                                            <select v-model="match.teamA[0]" class="w-full p-2 border rounded">
+                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                    {{ player.name }} ({{ Math.round(player.rating) }})
+                                                </option>
+                                            </select>
+                                            <select v-model="match.teamA[1]" class="w-full p-2 border rounded">
+                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                    {{ player.name }} ({{ Math.round(player.rating) }})
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Team B</label>
+                                        <select
+                                            v-if="match.format === 'singles' || match.format === '2v1' && match.teamB.length === 1"
+                                            v-model="match.teamB[0]"
+                                            class="w-full p-2 border rounded"
+                                        >
+                                            <option v-for="player in players" :key="player.id" :value="player.id">
+                                                {{ player.name }} ({{ Math.round(player.rating) }})
+                                            </option>
+                                        </select>
+                                        <div v-else class="space-y-2">
+                                            <select v-model="match.teamB[0]" class="w-full p-2 border rounded">
+                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                    {{ player.name }} ({{ Math.round(player.rating) }})
+                                                </option>
+                                            </select>
+                                            <select v-model="match.teamB[1]" class="w-full p-2 border rounded">
+                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                    {{ player.name }} ({{ Math.round(player.rating) }})
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="scheduleGenerator.sitOut" class="bg-yellow-50 border border-yellow-200 rounded p-3">
+                                <span class="font-medium">Sitting Out:</span> {{ getPlayerName(scheduleGenerator.sitOut) }}
+                            </div>
+                        </div>
+                        <button @click="saveGeneratedSchedule" class="w-full btn-primary text-white py-4 rounded-xl font-semibold text-lg shadow-lg">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v.93m0 0a2 2 0 01-2 2H9a2 2 0 01-2-2v-.93m0 0a2 2 0 012-2h2a2 2 0 012 2v.93"></path>
+                            </svg>
+                            Save This Schedule
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin: Data Management -->
+            <div v-if="activeTab === 'data' && isAdmin" class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold mb-4">Data Management</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Export Section -->
+                    <div class="border rounded-lg p-4">
+                        <h3 class="font-bold mb-3">Export Data</h3>
+                        <div class="space-y-3">
+                            <button @click="exportJSON" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                                📥 Export as JSON (Full Backup)
+                            </button>
+                            <button @click="exportCSV" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
+                                📊 Export Players as CSV
+                            </button>
+                            <button @click="printLeague" class="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700">
+                                🖨️ Print League Table
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Import Section -->
+                    <div class="border rounded-lg p-4">
+                        <h3 class="font-bold mb-3">Import Data</h3>
+                        <div class="space-y-3">
+                            <input type="file" @change="handleFileImport" accept=".json" class="w-full p-2 border rounded">
+                            <p class="text-sm text-gray-600">Select a JSON backup file to restore data</p>
+                            <button @click="deleteTodaysMatches" class="w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-700">
+                                🗑️ Delete Today's Matches
+                            </button>
+                            <button @click="recalculateAllRatings" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
+                                🔄 Recalculate All Ratings from 200
+                            </button>
+                            <button @click="clearAllData" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">
+                                ⚠️ Clear All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="mt-6 grid md:grid-cols-4 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg text-center">
+                        <p class="text-2xl font-bold text-blue-600">{{ players.length }}</p>
+                        <p class="text-sm text-gray-600">Total Players</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg text-center">
+                        <p class="text-2xl font-bold text-green-600">{{ matches.length }}</p>
+                        <p class="text-sm text-gray-600">Total Matches</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg text-center">
+                        <p class="text-2xl font-bold text-purple-600">{{ schedules.length }}</p>
+                        <p class="text-sm text-gray-600">Scheduled Games</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg text-center">
+                        <p class="text-2xl font-bold text-orange-600">{{ unprocessedMatches.length }}</p>
+                        <p class="text-sm text-gray-600">Unprocessed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // Auth
+                    isAdmin: false,
+                    showAdminLogin: false,
+                    adminPassword: '',
+                    adminPasswordHash: 'admin123', // In production, use proper hashing
+
+                    // Navigation
+                    activeTab: 'league',
+                    leagueFilter: 'overall',
+                    selectedDate: null,
+
+                    // Data
+                    players: [],
+                    matches: [],
+                    ratingsHistory: [],
+                    schedules: [],
+                    tournamentLeaderboards: [], // Stores snapshots of tournament standings
+
+                    // Forms
+                    showAddPlayer: false,
+                    newPlayer: {
+                        name: '',
+                        rating: 200
+                    },
+                    newMatch: {
+                        format: 'doubles',
+                        date: new Date().toISOString().split('T')[0],
+                        teamA: [],
+                        teamB: [],
+                        scoreA: 0,
+                        scoreB: 0,
+                        notes: '',
+                        scheduleId: null
+                    },
+                    scheduleGenerator: {
+                        date: new Date().toISOString().split('T')[0],
+                        courts: 2,
+                        format: 'doubles',
+                        rounds: 3,
+                        tournamentRounds: null,
+                        availablePlayers: [],
+                        notes: '',
+                        sitOut: null,
+                        keepSamePairings: false
+                    },
+                    generatedSchedule: [],
+                    showManualMatch: false,
+                    manualMatch: {
+                        format: 'doubles',
+                        date: new Date().toISOString().split('T')[0],
+                        court: 1,
+                        rounds: 3,
+                        teamA: ['', ''],
+                        teamB: ['', ''],
+                        notes: ''
+                    },
+                    // Round recording tracking
+                    expandedSchedules: {},
+                    roundScores: {}, // { scheduleId: { roundNumber: { A: score, B: score, saved: boolean } } }
+                    expandedMatches: {}, // Track expanded matches in history
+                    expandedSessions: {}, // Track which date sessions are expanded
+                    expandedRounds: {}, // Track which rounds are expanded
+
+                    // Tournament table viewing
+                    viewTournamentId: '', // Input field for tournament ID to view
+                    showTournamentTable: false // Toggle tournament table view
+                }
+            },
+            computed: {
+                availableTabs() {
+                    const publicTabs = [
+                        { id: 'league', name: 'League Table' },
+                        { id: 'schedule', name: 'Schedule' },
+                        { id: 'history', name: 'Match History' }
+                    ];
+                    
+                    const adminTabs = [
+                        { id: 'players', name: 'Players' },
+                        { id: 'scheduler', name: 'Generate Schedule' },
+                        { id: 'data', name: 'Data Management' }
+                    ];
+                    
+                    return this.isAdmin ? [...publicTabs, ...adminTabs] : publicTabs;
+                },
+                sortedPlayers() {
+                    return [...this.players].sort((a, b) => b.rating - a.rating);
+                },
+                recentMatches() {
+                    return [...this.matches].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
+                },
+                upcomingSchedules() {
+                    const today = new Date().toISOString().split('T')[0];
+
+                    // Get all dates that have tournaments (multiple rounds)
+                    const tournamentDates = new Set();
+                    this.schedules.forEach(s => {
+                        if (s.roundNumber && s.roundNumber > 1) {
+                            tournamentDates.add(s.date);
+                        }
+                    });
+
+                    // Also check for dates with multiple schedules having round numbers
+                    const dateRoundCounts = {};
+                    this.schedules.forEach(s => {
+                        if (s.roundNumber) {
+                            if (!dateRoundCounts[s.date]) {
+                                dateRoundCounts[s.date] = new Set();
+                            }
+                            dateRoundCounts[s.date].add(s.roundNumber);
+                        }
+                    });
+
+                    Object.entries(dateRoundCounts).forEach(([date, rounds]) => {
+                        if (rounds.size > 1) {
+                            tournamentDates.add(date);
+                        }
+                    });
+
+                    // Filter out tournament dates and only show upcoming single matches
+                    return [...this.schedules]
+                        .filter(s => s.date >= today && !tournamentDates.has(s.date))
+                        .sort((a, b) => new Date(a.date) - new Date(b.date));
+                },
+                unprocessedMatches() {
+                    return this.matches.filter(m => !m.processed);
+                },
+                todaysScheduledMatches() {
+                    const today = new Date().toISOString().split('T')[0];
+                    // Only show schedules that don't have a corresponding match recorded
+                    return this.schedules.filter(schedule => {
+                        if (schedule.date !== today) return false;
+                        
+                        // Check if there's already a match for this schedule
+                        const hasMatch = this.matches.some(match => {
+                            const sameDate = match.date === schedule.date;
+                            const sameTeams = 
+                                (JSON.stringify([...match.teamA].sort()) === JSON.stringify([...schedule.teamA].sort()) &&
+                                 JSON.stringify([...match.teamB].sort()) === JSON.stringify([...schedule.teamB].sort())) ||
+                                (JSON.stringify([...match.teamA].sort()) === JSON.stringify([...schedule.teamB].sort()) &&
+                                 JSON.stringify([...match.teamB].sort()) === JSON.stringify([...schedule.teamA].sort()));
+                            return sameDate && sameTeams;
+                        });
+                        
+                        return !hasMatch;
+                    });
+                },
+                completedTodaysMatches() {
+                    const today = new Date().toISOString().split('T')[0];
+                    // Show schedules that have a corresponding match recorded
+                    return this.schedules.filter(schedule => {
+                        if (schedule.date !== today) return false;
+
+                        // Check if there's already a match for this schedule
+                        const hasMatch = this.matches.some(match => {
+                            const sameDate = match.date === schedule.date;
+                            const sameTeams =
+                                (JSON.stringify([...match.teamA].sort()) === JSON.stringify([...schedule.teamA].sort()) &&
+                                 JSON.stringify([...match.teamB].sort()) === JSON.stringify([...schedule.teamB].sort())) ||
+                                (JSON.stringify([...match.teamA].sort()) === JSON.stringify([...schedule.teamB].sort()) &&
+                                 JSON.stringify([...match.teamB].sort()) === JSON.stringify([...schedule.teamA].sort()));
+                            return sameDate && sameTeams;
+                        });
+
+                        return hasMatch;
+                    });
+                },
+                groupedTodaysSchedules() {
+                    const today = new Date().toISOString().split('T')[0];
+                    const todaysSchedules = this.schedules.filter(s => s.date === today);
+
+                    if (todaysSchedules.length === 0) return [];
+
+                    // Group by tournament ID
+                    const grouped = {};
+
+                    todaysSchedules.forEach(schedule => {
+                        const tournamentKey = schedule.tournamentId || schedule.date;
+                        if (!grouped[tournamentKey]) {
+                            grouped[tournamentKey] = {
+                                tournamentId: tournamentKey,
+                                date: schedule.date,
+                                notes: schedule.notes,
+                                rounds: []
+                            };
+                        }
+
+                        // Find or create round group
+                        const roundNum = schedule.roundNumber || 1;
+                        let roundGroup = grouped[tournamentKey].rounds.find(r => r.roundNumber === roundNum);
+
+                        if (!roundGroup) {
+                            roundGroup = {
+                                roundNumber: roundNum,
+                                matches: []
+                            };
+                            grouped[tournamentKey].rounds.push(roundGroup);
+                        }
+
+                        roundGroup.matches.push(schedule);
+                    });
+
+                    // Sort rounds
+                    Object.values(grouped).forEach(session => {
+                        session.rounds.sort((a, b) => a.roundNumber - b.roundNumber);
+                    });
+
+                    return Object.values(grouped);
+                },
+
+                filteredLeaguePlayers() {
+                    const now = new Date();
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                    // Get date ranges
+                    let startDate, endDate;
+
+                    if (this.leagueFilter === 'overall') {
+                        // Return overall stats
+                        return this.sortedPlayers.map(p => ({
+                            ...p,
+                            filteredGames: p.gamesPlayed,
+                            filteredWins: p.wins,
+                            filteredLosses: p.losses,
+                            filteredRating: p.rating
+                        }));
+                    } else if (this.leagueFilter === 'today') {
+                        startDate = new Date(today);
+                        endDate = new Date(today);
+                        endDate.setHours(23, 59, 59);
+                    } else if (this.leagueFilter === 'customDate' && this.selectedDate) {
+                        const customDate = new Date(this.selectedDate);
+                        startDate = new Date(customDate);
+                        endDate = new Date(customDate);
+                        endDate.setHours(23, 59, 59);
+                    } else if (this.leagueFilter === 'thisMonth') {
+                        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                    } else if (this.leagueFilter === 'lastMonth') {
+                        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+                    } else if (this.leagueFilter === 'thisWeek') {
+                        const dayOfWeek = now.getDay();
+                        const monday = new Date(today);
+                        monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+                        startDate = monday;
+                        endDate = new Date(monday);
+                        endDate.setDate(monday.getDate() + 6);
+                        endDate.setHours(23, 59, 59);
+                    } else if (this.leagueFilter === 'lastWeek') {
+                        const dayOfWeek = now.getDay();
+                        const lastMonday = new Date(today);
+                        lastMonday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1) - 7);
+                        startDate = lastMonday;
+                        endDate = new Date(lastMonday);
+                        endDate.setDate(lastMonday.getDate() + 6);
+                        endDate.setHours(23, 59, 59);
+                    }
+
+                    // Filter matches by date range
+                    const filteredMatches = this.matches.filter(m => {
+                        const matchDate = new Date(m.date);
+                        return m.processed && matchDate >= startDate && matchDate <= endDate;
+                    });
+
+                    // Calculate stats for each player
+                    const playerStats = this.players.map(player => {
+                        let games = 0;
+                        let wins = 0;
+                        let losses = 0;
+                        let ratingChanges = [];
+
+                        // Get rating history for this period
+                        const relevantHistory = this.ratingsHistory.filter(h => {
+                            if (h.playerId !== player.id) return false;
+                            const historyDate = new Date(h.date);
+                            return historyDate >= startDate && historyDate <= endDate;
+                        });
+
+                        filteredMatches.forEach(match => {
+                            const inTeamA = match.teamA.includes(player.id);
+                            const inTeamB = match.teamB.includes(player.id);
+
+                            if (inTeamA || inTeamB) {
+                                games++;
+                                if ((inTeamA && match.winner === 'A') || (inTeamB && match.winner === 'B')) {
+                                    wins++;
+                                } else {
+                                    losses++;
+                                }
+                            }
+                        });
+
+                        // Calculate filtered rating based on changes in this period
+                        let filteredRating = player.rating;
+                        if (relevantHistory.length > 0) {
+                            const firstRecord = relevantHistory[0];
+                            const lastRecord = relevantHistory[relevantHistory.length - 1];
+                            // Start from the rating before the period and add all changes
+                            filteredRating = firstRecord.oldRating + relevantHistory.reduce((sum, h) => sum + h.change, 0);
+                        }
+
+                        return {
+                            ...player,
+                            filteredGames: games,
+                            filteredWins: wins,
+                            filteredLosses: losses,
+                            filteredRating: filteredRating
+                        };
+                    });
+
+                    // Sort by filtered wins (or rating for overall)
+                    return playerStats
+                        .filter(p => p.filteredGames > 0) // Only show players who played in this period
+                        .sort((a, b) => {
+                            // Sort by win percentage, then by games played
+                            const aWinPct = a.filteredGames > 0 ? a.filteredWins / a.filteredGames : 0;
+                            const bWinPct = b.filteredGames > 0 ? b.filteredWins / b.filteredGames : 0;
+
+                            if (Math.abs(aWinPct - bWinPct) < 0.001) {
+                                return b.filteredGames - a.filteredGames;
+                            }
+                            return bWinPct - aWinPct;
+                        });
+                }
+            },
+            methods: {
+                // Auth Methods
+                attemptLogin() {
+                    if (this.adminPassword === this.adminPasswordHash) {
+                        this.isAdmin = true;
+                        this.showAdminLogin = false;
+                        this.adminPassword = '';
+                        localStorage.setItem('isAdmin', 'true');
+                    } else {
+                        alert('Incorrect password');
+                    }
+                },
+                logout() {
+                    this.isAdmin = false;
+                    localStorage.removeItem('isAdmin');
+                    this.activeTab = 'league';
+                },
+
+                // Player Methods
+                generatePlayerId() {
+                    // Find the highest existing player number to avoid ID collisions
+                    let maxNum = 0;
+                    this.players.forEach(player => {
+                        const match = player.id.match(/^P(\d+)$/);
+                        if (match) {
+                            const num = parseInt(match[1], 10);
+                            if (num > maxNum) maxNum = num;
+                        }
+                    });
+                    return 'P' + String(maxNum + 1).padStart(3, '0');
+                },
+                addPlayer() {
+                    if (!this.newPlayer.name) {
+                        alert('Please enter a player name');
+                        return;
+                    }
+                    
+                    const player = {
+                        id: this.generatePlayerId(),
+                        name: this.newPlayer.name,
+                        rating: this.newPlayer.rating || 200,
+                        gamesPlayed: 0,
+                        wins: 0,
+                        losses: 0,
+                        createdAt: new Date().toISOString().split('T')[0]
+                    };
+                    
+                    this.players.push(player);
+                    this.saveData();
+                    this.cancelAddPlayer();
+                },
+                cancelAddPlayer() {
+                    this.showAddPlayer = false;
+                    this.newPlayer = { name: '', rating: 200 };
+                },
+                editPlayer(player) {
+                    const newName = prompt('Enter new name:', player.name);
+                    if (newName && newName !== player.name) {
+                        player.name = newName;
+                        this.saveData();
+                    }
+                },
+                deletePlayer(playerId) {
+                    if (confirm('Are you sure? This will delete all related match history and schedules.')) {
+                        this.players = this.players.filter(p => p.id !== playerId);
+                        this.matches = this.matches.filter(m =>
+                            !m.teamA.includes(playerId) && !m.teamB.includes(playerId)
+                        );
+                        this.ratingsHistory = this.ratingsHistory.filter(r => r.playerId !== playerId);
+                        this.schedules = this.schedules.filter(s =>
+                            !s.teamA.includes(playerId) && !s.teamB.includes(playerId)
+                        );
+                        this.saveData();
+                    }
+                },
+                deleteTournament(tournamentId) {
+                    const schedulesToDelete = this.schedules.filter(s => (s.tournamentId || s.date) === tournamentId);
+                    const matchesToDelete = this.matches.filter(m => (m.tournamentId || m.date) === tournamentId);
+
+                    const dateStr = schedulesToDelete.length > 0 ? this.formatDate(schedulesToDelete[0].date) : 'Unknown';
+                    const confirmMsg = `Delete entire tournament for ${dateStr}?\n\n` +
+                                      `- ${schedulesToDelete.length} scheduled matches\n` +
+                                      `- ${matchesToDelete.length} recorded matches\n` +
+                                      `- All associated rating changes will be reverted`;
+
+                    if (!confirm(confirmMsg)) {
+                        return;
+                    }
+
+                    // Delete schedules
+                    this.schedules = this.schedules.filter(s => (s.tournamentId || s.date) !== tournamentId);
+
+                    // Revert ratings for deleted matches
+                    const playerRatings = {};
+                    matchesToDelete.forEach(match => {
+                        [...match.teamA, ...match.teamB].forEach(playerId => {
+                            if (!playerRatings[playerId]) {
+                                const player = this.players.find(p => p.id === playerId);
+                                if (player) {
+                                    playerRatings[playerId] = player.rating;
+                                }
+                            }
+                        });
+                    });
+
+                    // Delete matches
+                    this.matches = this.matches.filter(m => (m.tournamentId || m.date) !== tournamentId);
+
+                    // Get the date for history filtering
+                    const tournamentDate = schedulesToDelete.length > 0 ? schedulesToDelete[0].date : null;
+
+                    // Revert ratings
+                    Object.keys(playerRatings).forEach(playerId => {
+                        const player = this.players.find(p => p.id === playerId);
+                        if (player && tournamentDate) {
+                            const lastRating = this.ratingsHistory
+                                .filter(r => r.playerId === playerId &&
+                                       new Date(r.date) < new Date(tournamentDate))
+                                .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+                            player.rating = lastRating ? lastRating.ratingAfter : 200;
+                        }
+                    });
+
+                    // Clean up rating history
+                    if (tournamentDate) {
+                        this.ratingsHistory = this.ratingsHistory.filter(r => r.tournamentId !== tournamentId);
+                    }
+
+                    // Recalculate wins/losses
+                    this.players.forEach(player => {
+                        const playerMatches = this.matches.filter(m =>
+                            m.teamA.includes(player.id) || m.teamB.includes(player.id)
+                        );
+                        player.wins = 0;
+                        player.losses = 0;
+                        playerMatches.forEach(match => {
+                            const isTeamA = match.teamA.includes(player.id);
+                            const won = (isTeamA && match.scoreA > match.scoreB) ||
+                                       (!isTeamA && match.scoreB > match.scoreA);
+                            if (won) player.wins++;
+                            else player.losses++;
+                        });
+                    });
+
+                    this.saveData();
+                    alert('Tournament deleted successfully');
+                },
+                endTournament(tournamentId) {
+                    const schedulesToEnd = this.schedules.filter(s => (s.tournamentId || s.date) === tournamentId);
+                    const matchesToProcess = this.matches.filter(m => (m.tournamentId || m.date) === tournamentId && !m.processed);
+
+                    const dateStr = schedulesToEnd.length > 0 ? this.formatDate(schedulesToEnd[0].date) : 'Unknown';
+                    const confirmMsg = `End tournament for ${dateStr}?\n\n` +
+                                      `- ${schedulesToEnd.length} scheduled matches will be removed\n` +
+                                      `- ${matchesToProcess.length} unprocessed matches will have ratings processed\n` +
+                                      `- Tournament leaderboard will be finalized\n` +
+                                      `- All matches are saved in history`;
+
+                    if (!confirm(confirmMsg)) {
+                        return;
+                    }
+
+                    // Process any remaining unprocessed matches
+                    if (matchesToProcess.length > 0) {
+                        this.processAllRatings();
+                    }
+
+                    // Finalize tournament snapshot
+                    this.finalizeTournamentSnapshot(tournamentId);
+
+                    // Remove schedules for this tournament
+                    this.schedules = this.schedules.filter(s => (s.tournamentId || s.date) !== tournamentId);
+
+                    this.saveData();
+                    alert('Tournament ended successfully! All matches saved to history and leaderboard finalized.');
+                },
+
+                // Match Methods
+                generateMatchId() {
+                    const num = this.matches.length + 1;
+                    return 'M' + String(num).padStart(3, '0');
+                },
+                saveMatch() {
+                    // Validation
+                    if (this.newMatch.teamA.length === 0 || this.newMatch.teamB.length === 0) {
+                        alert('Please select players for both teams');
+                        return;
+                    }
+                    
+                    // Check for duplicate players
+                    const allPlayers = [...this.newMatch.teamA, ...this.newMatch.teamB];
+                    if (new Set(allPlayers).size !== allPlayers.length) {
+                        alert('A player cannot be on both teams');
+                        return;
+                    }
+                    
+                    // Validate format
+                    if (this.newMatch.format === 'singles' && (this.newMatch.teamA.length !== 1 || this.newMatch.teamB.length !== 1)) {
+                        alert('Singles requires exactly 1 player per team');
+                        return;
+                    }
+                    if (this.newMatch.format === 'doubles' && (this.newMatch.teamA.length !== 2 || this.newMatch.teamB.length !== 2)) {
+                        alert('Doubles requires exactly 2 players per team');
+                        return;
+                    }
+                    if (this.newMatch.format === '2v1' && 
+                        !((this.newMatch.teamA.length === 2 && this.newMatch.teamB.length === 1) || 
+                          (this.newMatch.teamA.length === 1 && this.newMatch.teamB.length === 2))) {
+                        alert('2v1 requires 2 players on one team and 1 on the other');
+                        return;
+                    }
+                    
+                    const match = {
+                        id: this.generateMatchId(),
+                        date: this.newMatch.date,
+                        format: this.newMatch.format,
+                        teamA: [...this.newMatch.teamA],
+                        teamB: [...this.newMatch.teamB],
+                        scoreA: this.newMatch.scoreA,
+                        scoreB: this.newMatch.scoreB,
+                        winner: this.newMatch.scoreA > this.newMatch.scoreB ? 'A' : 'B',
+                        processed: false,
+                        notes: this.newMatch.notes
+                    };
+                    
+                    this.matches.push(match);
+                    
+                    // Auto-process this match immediately
+                    this.processMatch(match);
+                    
+                    this.saveData();
+                    
+                    // Reset form
+                    this.newMatch = {
+                        format: 'doubles',
+                        date: new Date().toISOString().split('T')[0],
+                        teamA: [],
+                        teamB: [],
+                        scoreA: 0,
+                        scoreB: 0,
+                        notes: '',
+                        scheduleId: null
+                    };
+                    
+                    alert('Match saved and ratings updated!');
+                },
+
+                // Rating Methods
+                calculateElo(ratingA, ratingB, scoreA, scoreB, kFactor = 32) {
+                    const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+                    const actualA = scoreA > scoreB ? 1 : 0;
+                    const changeA = kFactor * (actualA - expectedA);
+                    return {
+                        changeA: changeA,
+                        changeB: -changeA
+                    };
+                },
+                processMatch(match) {
+                    if (match.processed) return; // Already processed
+                    
+                    // Get team ratings
+                    const teamAPlayers = match.teamA.map(id => this.players.find(p => p.id === id));
+                    const teamBPlayers = match.teamB.map(id => this.players.find(p => p.id === id));
+                    
+                    const teamARating = teamAPlayers.reduce((sum, p) => sum + p.rating, 0) / teamAPlayers.length;
+                    const teamBRating = teamBPlayers.reduce((sum, p) => sum + p.rating, 0) / teamBPlayers.length;
+                    
+                    // Calculate rating changes
+                    const changes = this.calculateElo(teamARating, teamBRating, match.scoreA, match.scoreB);
+                    
+                    // Update player ratings and stats
+                    teamAPlayers.forEach(player => {
+                        const oldRating = player.rating;
+                        player.rating += changes.changeA;
+                        player.gamesPlayed++;
+                        if (match.winner === 'A') player.wins++;
+                        else player.losses++;
+                        
+                        // Add to history
+                        this.ratingsHistory.push({
+                            id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
+                            playerId: player.id,
+                            matchId: match.id,
+                            oldRating: oldRating,
+                            newRating: player.rating,
+                            change: changes.changeA,
+                            date: match.date
+                        });
+                    });
+                    
+                    teamBPlayers.forEach(player => {
+                        const oldRating = player.rating;
+                        player.rating += changes.changeB;
+                        player.gamesPlayed++;
+                        if (match.winner === 'B') player.wins++;
+                        else player.losses++;
+                        
+                        // Add to history
+                        this.ratingsHistory.push({
+                            id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
+                            playerId: player.id,
+                            matchId: match.id,
+                            oldRating: oldRating,
+                            newRating: player.rating,
+                            change: changes.changeB,
+                            date: match.date
+                        });
+                    });
+                    
+                    match.processed = true;
+                },
+                processAllMatches() {
+                    const unprocessed = this.matches.filter(m => !m.processed);
+                    
+                    unprocessed.forEach(match => {
+                        // Get team ratings
+                        const teamAPlayers = match.teamA.map(id => this.players.find(p => p.id === id));
+                        const teamBPlayers = match.teamB.map(id => this.players.find(p => p.id === id));
+                        
+                        const teamARating = teamAPlayers.reduce((sum, p) => sum + p.rating, 0) / teamAPlayers.length;
+                        const teamBRating = teamBPlayers.reduce((sum, p) => sum + p.rating, 0) / teamBPlayers.length;
+                        
+                        // Calculate rating changes
+                        const changes = this.calculateElo(teamARating, teamBRating, match.scoreA, match.scoreB);
+                        
+                        // Update player ratings and stats
+                        teamAPlayers.forEach(player => {
+                            const oldRating = player.rating;
+                            player.rating += changes.changeA;
+                            player.gamesPlayed++;
+                            if (match.winner === 'A') player.wins++;
+                            else player.losses++;
+                            
+                            // Add to history
+                            this.ratingsHistory.push({
+                                id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
+                                playerId: player.id,
+                                matchId: match.id,
+                                oldRating: oldRating,
+                                newRating: player.rating,
+                                change: changes.changeA,
+                                date: match.date
+                            });
+                        });
+                        
+                        teamBPlayers.forEach(player => {
+                            const oldRating = player.rating;
+                            player.rating += changes.changeB;
+                            player.gamesPlayed++;
+                            if (match.winner === 'B') player.wins++;
+                            else player.losses++;
+                            
+                            // Add to history
+                            this.ratingsHistory.push({
+                                id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
+                                playerId: player.id,
+                                matchId: match.id,
+                                oldRating: oldRating,
+                                newRating: player.rating,
+                                change: changes.changeB,
+                                date: match.date
+                            });
+                        });
+                        
+                        match.processed = true;
+                    });
+                    
+                    this.saveData();
+                    alert(`Processed ${unprocessed.length} matches and updated ratings!`);
+                },
+
+                // Helper methods for schedule generation
+                getPartnershipKey(p1, p2) {
+                    return [p1, p2].sort().join('-');
+                },
+                getMatchupKey(team1, team2) {
+                    return [team1.sort().join(','), team2.sort().join(',')].sort().join('|');
+                },
+                countPartnerships(schedules, matches) {
+                    const partnerships = {};
+                    const allGames = [...schedules, ...matches.filter(m => m.processed)];
+
+                    allGames.forEach(game => {
+                        if (game.format === 'doubles' || (game.format === '2v1' && game.teamA.length === 2)) {
+                            if (game.teamA.length === 2) {
+                                const key = this.getPartnershipKey(game.teamA[0], game.teamA[1]);
+                                partnerships[key] = (partnerships[key] || 0) + 1;
+                            }
+                            if (game.teamB.length === 2) {
+                                const key = this.getPartnershipKey(game.teamB[0], game.teamB[1]);
+                                partnerships[key] = (partnerships[key] || 0) + 1;
+                            }
+                        }
+                    });
+
+                    return partnerships;
+                },
+                countOpponents(schedules, matches) {
+                    const opponents = {};
+                    const allGames = [...schedules, ...matches.filter(m => m.processed)];
+
+                    allGames.forEach(game => {
+                        game.teamA.forEach(p1 => {
+                            game.teamB.forEach(p2 => {
+                                const key = this.getPartnershipKey(p1, p2);
+                                opponents[key] = (opponents[key] || 0) + 1;
+                            });
+                        });
+                    });
+
+                    return opponents;
+                },
+                countSitOuts(schedules) {
+                    const sitOuts = {};
+                    const allPlayerIds = this.scheduleGenerator.availablePlayers;
+
+                    allPlayerIds.forEach(id => sitOuts[id] = 0);
+
+                    schedules.forEach(schedule => {
+                        if (schedule.date === this.scheduleGenerator.date) {
+                            const playingIds = [...schedule.teamA, ...schedule.teamB];
+                            allPlayerIds.forEach(id => {
+                                if (!playingIds.includes(id)) {
+                                    sitOuts[id] = (sitOuts[id] || 0) + 1;
+                                }
+                            });
+                        }
+                    });
+
+                    return sitOuts;
+                },
+
+                // Tournament Generation (Multiple Rounds)
+                generateTournament() {
+                    const available = [...this.scheduleGenerator.availablePlayers];
+                    const format = this.scheduleGenerator.format;
+                    const numCourts = this.scheduleGenerator.courts;
+                    const numRounds = this.scheduleGenerator.tournamentRounds || 10;
+                    const keepSamePairings = this.scheduleGenerator.keepSamePairings;
+
+                    if (format !== 'doubles') {
+                        alert('Tournament generator currently only supports doubles format');
+                        return;
+                    }
+
+                    if (available.length < 4) {
+                        alert('Need at least 4 players for doubles tournament');
+                        return;
+                    }
+
+                    const playerObjs = available.map(id => this.players.find(p => p.id === id));
+                    const allRoundsSchedule = [];
+
+                    // Track partnerships and opponents across ALL rounds
+                    const tournamentPartnerships = {};
+                    const tournamentOpponents = {};
+                    const sitOutCounts = {};
+                    const lastSatOutRound = {}; // Track which round each player last sat out
+                    const fixedPairings = []; // Store fixed partnerships if keepSamePairings is true
+
+                    playerObjs.forEach(p => {
+                        sitOutCounts[p.id] = 0;
+                        lastSatOutRound[p.id] = -10; // Initialize to far in past
+                    });
+
+                    for (let roundNum = 1; roundNum <= numRounds; roundNum++) {
+                        const roundMatches = [];
+                        const playersThisRound = [...playerObjs];
+
+                        // Determine sit-outs for this round (prioritize those who sat out least)
+                        const playersNeeded = numCourts * 4;
+                        const sitOutsNeeded = playersThisRound.length - playersNeeded;
+
+                        const sitOutsThisRound = [];
+                        if (sitOutsNeeded > 0) {
+                            // Filter out anyone who sat out in the previous round
+                            const eligibleToSitOut = playersThisRound.filter(p =>
+                                lastSatOutRound[p.id] < roundNum - 1
+                            );
+
+                            // If not enough eligible players (shouldn't happen with 10 players, 2 courts)
+                            // fall back to all players
+                            const candidatePool = eligibleToSitOut.length >= sitOutsNeeded
+                                ? eligibleToSitOut
+                                : playersThisRound;
+
+                            // Sort by sit-out count (ascending) then by last sat-out round (ascending)
+                            const sorted = [...candidatePool].sort((a, b) => {
+                                const countDiff = sitOutCounts[a.id] - sitOutCounts[b.id];
+                                if (countDiff !== 0) return countDiff;
+                                return lastSatOutRound[a.id] - lastSatOutRound[b.id];
+                            });
+
+                            // Take the first N players (those with fewest sit-outs and oldest sit-out)
+                            for (let i = 0; i < sitOutsNeeded; i++) {
+                                const sitOut = sorted[i];
+                                sitOutsThisRound.push(sitOut);
+                                sitOutCounts[sitOut.id]++;
+                                lastSatOutRound[sitOut.id] = roundNum;
+                                playersThisRound.splice(playersThisRound.indexOf(sitOut), 1);
+                            }
+                        }
+
+                        // Generate matches for this round
+                        let attempts = 0;
+                        let validRound = false;
+
+                        while (!validRound && attempts < 100) {
+                            attempts++;
+                            let testMatches = [];
+                            let valid = true;
+
+                            if (keepSamePairings) {
+                                // Fixed pairings mode
+                                if (roundNum === 1) {
+                                    // First round: establish pairings
+                                    const shuffled = this.shuffleArray([...playersThisRound]);
+
+                                    for (let court = 0; court < numCourts && shuffled.length >= 4; court++) {
+                                        const team1 = [shuffled.shift(), shuffled.shift()];
+                                        const team2 = [shuffled.shift(), shuffled.shift()];
+
+                                        // Store these as fixed pairings
+                                        fixedPairings.push(team1, team2);
+
+                                        testMatches.push({
+                                            court: court + 1,
+                                            team1: team1,
+                                            team2: team2
+                                        });
+                                    }
+                                } else {
+                                    // Subsequent rounds: use fixed pairings, rotate opponents
+                                    const availablePairings = [];
+
+                                    // Get pairings for players who are playing this round
+                                    playersThisRound.forEach(player => {
+                                        const pairing = fixedPairings.find(p =>
+                                            p[0].id === player.id || p[1].id === player.id
+                                        );
+                                        if (pairing && !availablePairings.some(ap =>
+                                            (ap[0].id === pairing[0].id && ap[1].id === pairing[1].id) ||
+                                            (ap[0].id === pairing[1].id && ap[1].id === pairing[0].id)
+                                        )) {
+                                            availablePairings.push(pairing);
+                                        }
+                                    });
+
+                                    const shuffledPairings = this.shuffleArray([...availablePairings]);
+
+                                    for (let court = 0; court < numCourts && shuffledPairings.length >= 2; court++) {
+                                        const team1 = shuffledPairings.shift();
+                                        const team2 = shuffledPairings.shift();
+
+                                        testMatches.push({
+                                            court: court + 1,
+                                            team1: team1,
+                                            team2: team2
+                                        });
+                                    }
+                                }
+                            } else {
+                                // Original rotating partners mode
+                                const shuffled = this.shuffleArray([...playersThisRound]);
+
+                                for (let court = 0; court < numCourts && shuffled.length >= 4; court++) {
+                                    const four = shuffled.splice(0, 4);
+
+                                    // Try different team combinations
+                                    const combos = [
+                                        [[four[0], four[1]], [four[2], four[3]]],
+                                        [[four[0], four[2]], [four[1], four[3]]],
+                                        [[four[0], four[3]], [four[1], four[2]]]
+                                    ];
+
+                                    let bestCombo = null;
+                                    let bestScore = Infinity;
+
+                                    for (const [team1, team2] of combos) {
+                                        const p1Key = this.getPartnershipKey(team1[0].id, team1[1].id);
+                                        const p2Key = this.getPartnershipKey(team2[0].id, team2[1].id);
+
+                                        // Check if partnerships are fresh
+                                        const p1Count = tournamentPartnerships[p1Key] || 0;
+                                        const p2Count = tournamentPartnerships[p2Key] || 0;
+
+                                        // Calculate opponent frequency
+                                        let oppScore = 0;
+                                        team1.forEach(t1 => {
+                                            team2.forEach(t2 => {
+                                                const oppKey = this.getPartnershipKey(t1.id, t2.id);
+                                                oppScore += (tournamentOpponents[oppKey] || 0);
+                                            });
+                                        });
+
+                                        const totalScore = (p1Count + p2Count) * 100 + oppScore * 10;
+
+                                        if (totalScore < bestScore) {
+                                            bestScore = totalScore;
+                                            bestCombo = [team1, team2];
+                                        }
+                                    }
+
+                                    if (bestCombo) {
+                                        testMatches.push({
+                                            court: court + 1,
+                                            team1: bestCombo[0],
+                                            team2: bestCombo[1]
+                                        });
+                                    }
+                                }
+                            }
+
+                            if (testMatches.length === numCourts) {
+                                validRound = true;
+
+                                // Update tracking
+                                testMatches.forEach(match => {
+                                    const p1Key = this.getPartnershipKey(match.team1[0].id, match.team1[1].id);
+                                    const p2Key = this.getPartnershipKey(match.team2[0].id, match.team2[1].id);
+
+                                    // Only track partnerships if not using fixed pairings
+                                    if (!keepSamePairings) {
+                                        tournamentPartnerships[p1Key] = (tournamentPartnerships[p1Key] || 0) + 1;
+                                        tournamentPartnerships[p2Key] = (tournamentPartnerships[p2Key] || 0) + 1;
+                                    }
+
+                                    match.team1.forEach(t1 => {
+                                        match.team2.forEach(t2 => {
+                                            const oppKey = this.getPartnershipKey(t1.id, t2.id);
+                                            tournamentOpponents[oppKey] = (tournamentOpponents[oppKey] || 0) + 1;
+                                        });
+                                    });
+
+                                    const team1Rating = (match.team1[0].rating + match.team1[1].rating) / 2;
+                                    const team2Rating = (match.team2[0].rating + match.team2[1].rating) / 2;
+
+                                    allRoundsSchedule.push({
+                                        roundNumber: roundNum,
+                                        court: match.court,
+                                        format: 'doubles',
+                                        teamA: match.team1.map(p => p.id),
+                                        teamANames: match.team1.map(p => p.name).join(' & '),
+                                        teamARating: team1Rating,
+                                        teamB: match.team2.map(p => p.id),
+                                        teamBNames: match.team2.map(p => p.name).join(' & '),
+                                        teamBRating: team2Rating,
+                                        ratingDiff: Math.abs(team1Rating - team2Rating).toFixed(0),
+                                        sitOuts: sitOutsThisRound.map(p => ({ id: p.id, name: p.name }))
+                                    });
+                                });
+                            }
+                        }
+
+                        if (!validRound) {
+                            alert(`Could not generate valid round ${roundNum}. Try with different parameters.`);
+                            return;
+                        }
+                    }
+
+                    this.generatedSchedule = allRoundsSchedule;
+                    const pairingsMsg = keepSamePairings ? ' with fixed pairings' : ' with rotating partners';
+                    alert(`Generated ${numRounds}-round tournament successfully${pairingsMsg}!`);
+                },
+
+                // Schedule Methods
+                generateSchedule() {
+                    const available = [...this.scheduleGenerator.availablePlayers];
+                    const format = this.scheduleGenerator.format;
+                    const numCourts = this.scheduleGenerator.courts;
+
+                    // Validation based on format
+                    if (format === 'singles') {
+                        if (available.length < 2) {
+                            alert('Need at least 2 players for singles matches');
+                            return;
+                        }
+                    } else if (format === 'doubles') {
+                        if (available.length < 4) {
+                            alert('Need at least 4 players for doubles matches');
+                            return;
+                        }
+                    } else if (format === '2v1') {
+                        if (available.length < 3) {
+                            alert('Need at least 3 players for 2v1 matches');
+                            return;
+                        }
+                    }
+
+                    // Get player objects
+                    const playerObjs = available.map(id => this.players.find(p => p.id === id));
+
+                    // Get historical data
+                    const partnerships = this.countPartnerships(this.schedules, this.matches);
+                    const opponents = this.countOpponents(this.schedules, this.matches);
+                    const sitOuts = this.countSitOuts(this.schedules);
+
+                    let bestSchedule = null;
+                    let bestScore = Infinity;
+                    const maxAttempts = 1000;
+
+                    // Try multiple times to find best schedule
+                    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                        const result = this.generateScheduleAttempt(
+                            playerObjs, format, numCourts, partnerships, opponents, sitOuts
+                        );
+
+                        if (result && result.score < bestScore) {
+                            bestScore = result.score;
+                            bestSchedule = result.schedule;
+                        }
+
+                        // If we found a perfect solution, stop
+                        if (bestScore === 0) break;
+                    }
+
+                    if (bestSchedule) {
+                        this.generatedSchedule = bestSchedule.matches;
+                        this.scheduleGenerator.sitOut = bestSchedule.sitOut;
+                    } else {
+                        alert('Could not generate a valid schedule. Try adjusting the number of courts or players.');
+                    }
+                },
+
+                generateScheduleAttempt(playerObjs, format, numCourts, partnerships, opponents, sitOuts) {
+                    const players = [...playerObjs];
+                    players.sort((a, b) => b.rating - a.rating);
+
+                    let sitOutPlayer = null;
+                    const playersNeeded = format === 'singles' ? numCourts * 2 :
+                                         format === 'doubles' ? numCourts * 4 :
+                                         numCourts * 3;
+
+                    // Determine who sits out (if anyone)
+                    if (players.length > playersNeeded) {
+                        // Pick player with most sit-outs to play this time (fairness)
+                        const leastSitOuts = Math.min(...players.map(p => sitOuts[p.id] || 0));
+                        const candidatesToSitOut = players.filter(p => (sitOuts[p.id] || 0) === leastSitOuts);
+                        const randomIndex = Math.floor(Math.random() * candidatesToSitOut.length);
+                        sitOutPlayer = candidatesToSitOut[randomIndex];
+                        players.splice(players.indexOf(sitOutPlayer), 1);
+                    } else if (players.length < playersNeeded) {
+                        // Not enough players for all courts
+                        return null;
+                    }
+
+                    const matches = [];
+                    const tempPartnerships = {...partnerships};
+                    const tempOpponents = {...opponents};
+                    let score = 0;
+
+                    if (format === 'doubles') {
+                        // Generate doubles matches
+                        const shuffled = this.shuffleArray([...players]);
+
+                        for (let court = 0; court < numCourts && shuffled.length >= 4; court++) {
+                            // Try to create balanced teams
+                            const bestMatch = this.findBestDoublesMatch(
+                                shuffled, tempPartnerships, tempOpponents
+                            );
+
+                            if (!bestMatch) return null;
+
+                            const {team1, team2, matchScore} = bestMatch;
+                            score += matchScore;
+
+                            // Remove players from pool
+                            team1.forEach(p => shuffled.splice(shuffled.indexOf(p), 1));
+                            team2.forEach(p => shuffled.splice(shuffled.indexOf(p), 1));
+
+                            // Update temp tracking
+                            const p1Key = this.getPartnershipKey(team1[0].id, team1[1].id);
+                            const p2Key = this.getPartnershipKey(team2[0].id, team2[1].id);
+                            tempPartnerships[p1Key] = (tempPartnerships[p1Key] || 0) + 1;
+                            tempPartnerships[p2Key] = (tempPartnerships[p2Key] || 0) + 1;
+
+                            team1.forEach(p1 => {
+                                team2.forEach(p2 => {
+                                    const oppKey = this.getPartnershipKey(p1.id, p2.id);
+                                    tempOpponents[oppKey] = (tempOpponents[oppKey] || 0) + 1;
+                                });
+                            });
+
+                            const team1Rating = (team1[0].rating + team1[1].rating) / 2;
+                            const team2Rating = (team2[0].rating + team2[1].rating) / 2;
+
+                            matches.push({
+                                teamA: team1.map(p => p.id),
+                                teamANames: team1.map(p => p.name).join(' & '),
+                                teamARating: team1Rating,
+                                teamB: team2.map(p => p.id),
+                                teamBNames: team2.map(p => p.name).join(' & '),
+                                teamBRating: team2Rating,
+                                ratingDiff: Math.abs(team1Rating - team2Rating).toFixed(0),
+                                format: 'doubles',
+                                court: court + 1
+                            });
+                        }
+                    } else if (format === 'singles') {
+                        // Generate singles matches
+                        const shuffled = this.shuffleArray([...players]);
+
+                        for (let court = 0; court < numCourts && shuffled.length >= 2; court++) {
+                            const p1 = shuffled.shift();
+                            const p2 = shuffled.shift();
+
+                            const oppKey = this.getPartnershipKey(p1.id, p2.id);
+                            const oppCount = tempOpponents[oppKey] || 0;
+                            score += oppCount * 10;
+                            tempOpponents[oppKey] = oppCount + 1;
+
+                            const ratingDiff = Math.abs(p1.rating - p2.rating);
+                            if (ratingDiff > 150) score += (ratingDiff - 150);
+
+                            matches.push({
+                                teamA: [p1.id],
+                                teamANames: p1.name,
+                                teamARating: p1.rating,
+                                teamB: [p2.id],
+                                teamBNames: p2.name,
+                                teamBRating: p2.rating,
+                                ratingDiff: ratingDiff.toFixed(0),
+                                format: 'singles',
+                                court: court + 1
+                            });
+                        }
+                    }
+
+                    return {
+                        schedule: {
+                            matches: matches,
+                            sitOut: sitOutPlayer ? sitOutPlayer.id : null
+                        },
+                        score: score
+                    };
+                },
+
+                findBestDoublesMatch(players, partnerships, opponents) {
+                    let bestMatch = null;
+                    let bestScore = Infinity;
+                    const maxTries = Math.min(50, players.length * players.length);
+
+                    for (let i = 0; i < maxTries; i++) {
+                        // Pick 4 random players
+                        const shuffled = this.shuffleArray([...players]);
+                        if (shuffled.length < 4) return null;
+
+                        const four = shuffled.slice(0, 4);
+
+                        // Try different team combinations
+                        const combinations = [
+                            [[four[0], four[1]], [four[2], four[3]]],
+                            [[four[0], four[2]], [four[1], four[3]]],
+                            [[four[0], four[3]], [four[1], four[2]]]
+                        ];
+
+                        for (const [team1, team2] of combinations) {
+                            const score = this.scoreDoublesMatch(team1, team2, partnerships, opponents);
+
+                            if (score < bestScore) {
+                                bestScore = score;
+                                bestMatch = {team1, team2, matchScore: score};
+                            }
+                        }
+                    }
+
+                    return bestMatch;
+                },
+
+                scoreDoublesMatch(team1, team2, partnerships, opponents) {
+                    let score = 0;
+
+                    // Check partnership constraints
+                    const p1Key = this.getPartnershipKey(team1[0].id, team1[1].id);
+                    const p2Key = this.getPartnershipKey(team2[0].id, team2[1].id);
+
+                    const p1Count = partnerships[p1Key] || 0;
+                    const p2Count = partnerships[p2Key] || 0;
+
+                    // Penalize partnerships used more than twice
+                    if (p1Count >= 2) score += (p1Count - 1) * 100;
+                    if (p2Count >= 2) score += (p2Count - 1) * 100;
+
+                    // Check opponent frequency
+                    team1.forEach(p1 => {
+                        team2.forEach(p2 => {
+                            const oppKey = this.getPartnershipKey(p1.id, p2.id);
+                            const oppCount = opponents[oppKey] || 0;
+                            score += oppCount * 10;
+                        });
+                    });
+
+                    // Check rating difference
+                    const team1Rating = (team1[0].rating + team1[1].rating) / 2;
+                    const team2Rating = (team2[0].rating + team2[1].rating) / 2;
+                    const ratingDiff = Math.abs(team1Rating - team2Rating);
+
+                    if (ratingDiff > 150) {
+                        score += (ratingDiff - 150) * 2;
+                    }
+
+                    return score;
+                },
+
+                shuffleArray(array) {
+                    const arr = [...array];
+                    for (let i = arr.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [arr[i], arr[j]] = [arr[j], arr[i]];
+                    }
+                    return arr;
+                },
+                saveGeneratedSchedule() {
+                    // Generate unique tournament ID based on timestamp
+                    const tournamentId = 'T' + Date.now();
+
+                    this.generatedSchedule.forEach(match => {
+                        const schedule = {
+                            id: 'S' + String(this.schedules.length + 1).padStart(3, '0'),
+                            tournamentId: tournamentId,
+                            date: this.scheduleGenerator.date,
+                            court: match.court,
+                            format: match.format,
+                            teamA: match.teamA,
+                            teamB: match.teamB,
+                            roundNumber: match.roundNumber || 1,
+                            rounds: this.scheduleGenerator.rounds || 1,
+                            notes: this.scheduleGenerator.notes
+                        };
+                        this.schedules.push(schedule);
+                    });
+
+                    // Create tournament snapshot
+                    this.createTournamentSnapshot(tournamentId, this.scheduleGenerator.date, this.scheduleGenerator.notes);
+
+                    this.saveData();
+                    this.generatedSchedule = [];
+                    this.scheduleGenerator.availablePlayers = [];
+                    alert('Schedule saved successfully!');
+                },
+                resetManualMatchPlayers() {
+                    if (this.manualMatch.format === 'singles') {
+                        this.manualMatch.teamA = [''];
+                        this.manualMatch.teamB = [''];
+                    } else if (this.manualMatch.format === 'doubles') {
+                        this.manualMatch.teamA = ['', ''];
+                        this.manualMatch.teamB = ['', ''];
+                    } else if (this.manualMatch.format === '2v1') {
+                        this.manualMatch.teamA = ['', ''];
+                        this.manualMatch.teamB = [''];
+                    }
+                },
+                saveManualMatch() {
+                    // Filter out empty selections
+                    const teamA = this.manualMatch.teamA.filter(p => p !== '');
+                    const teamB = this.manualMatch.teamB.filter(p => p !== '');
+
+                    // Validation
+                    if (teamA.length === 0 || teamB.length === 0) {
+                        alert('Please select players for both teams');
+                        return;
+                    }
+
+                    // Check for duplicate players
+                    const allPlayers = [...teamA, ...teamB];
+                    if (new Set(allPlayers).size !== allPlayers.length) {
+                        alert('A player cannot be on both teams');
+                        return;
+                    }
+
+                    // Validate format
+                    if (this.manualMatch.format === 'singles' && (teamA.length !== 1 || teamB.length !== 1)) {
+                        alert('Singles requires exactly 1 player per team');
+                        return;
+                    }
+                    if (this.manualMatch.format === 'doubles' && (teamA.length !== 2 || teamB.length !== 2)) {
+                        alert('Doubles requires exactly 2 players per team');
+                        return;
+                    }
+                    if (this.manualMatch.format === '2v1' &&
+                        !((teamA.length === 2 && teamB.length === 1) ||
+                          (teamA.length === 1 && teamB.length === 2))) {
+                        alert('2v1 requires 2 players on one team and 1 on the other');
+                        return;
+                    }
+
+                    // Generate unique tournament ID based on timestamp
+                    const tournamentId = 'T' + Date.now();
+
+                    const schedule = {
+                        id: 'S' + String(this.schedules.length + 1).padStart(3, '0'),
+                        tournamentId: tournamentId,
+                        date: this.manualMatch.date,
+                        court: this.manualMatch.court,
+                        format: this.manualMatch.format,
+                        teamA: teamA,
+                        teamB: teamB,
+                        roundNumber: 1,
+                        rounds: this.manualMatch.rounds || 1,
+                        notes: this.manualMatch.notes
+                    };
+
+                    this.schedules.push(schedule);
+
+                    // Create tournament snapshot
+                    this.createTournamentSnapshot(tournamentId, this.manualMatch.date, this.manualMatch.notes);
+
+                    this.saveData();
+
+                    alert('Match added to schedule successfully!');
+                    this.cancelManualMatch();
+                },
+                cancelManualMatch() {
+                    this.showManualMatch = false;
+                    this.manualMatch = {
+                        format: 'doubles',
+                        date: new Date().toISOString().split('T')[0],
+                        court: 1,
+                        rounds: 3,
+                        teamA: ['', ''],
+                        teamB: ['', ''],
+                        notes: ''
+                    };
+                },
+
+                // Match History Methods
+                toggleMatchExpand(matchId) {
+                    this.expandedMatches[matchId] = !this.expandedMatches[matchId];
+                },
+
+                // Round Recording Methods
+                toggleScheduleExpand(scheduleId) {
+                    this.expandedSchedules[scheduleId] = !this.expandedSchedules[scheduleId];
+
+                    // Initialize round scores if not exists
+                    if (!this.roundScores[scheduleId]) {
+                        this.roundScores[scheduleId] = {};
+                    }
+                },
+                getRoundScore(scheduleId, round, team) {
+                    if (!this.roundScores[scheduleId] || !this.roundScores[scheduleId][round]) {
+                        return '';
+                    }
+                    return this.roundScores[scheduleId][round][team] || '';
+                },
+                updateRoundScore(scheduleId, round, team, value) {
+                    if (!this.roundScores[scheduleId]) {
+                        this.roundScores[scheduleId] = {};
+                    }
+                    if (!this.roundScores[scheduleId][round]) {
+                        this.roundScores[scheduleId][round] = { A: '', B: '', saved: false };
+                    }
+                    this.roundScores[scheduleId][round][team] = value;
+                },
+                saveRound(scheduleId, round) {
+                    if (!this.roundScores[scheduleId] || !this.roundScores[scheduleId][round]) return;
+
+                    const scoreA = this.roundScores[scheduleId][round].A;
+                    const scoreB = this.roundScores[scheduleId][round].B;
+
+                    if (scoreA === '' || scoreB === '') {
+                        alert('Please enter both scores');
+                        return;
+                    }
+
+                    this.roundScores[scheduleId][round].saved = true;
+                },
+                isRoundSaved(scheduleId, round) {
+                    return this.roundScores[scheduleId]?.[round]?.saved || false;
+                },
+                toggleSessionExpand(date) {
+                    this.expandedSessions[date] = !this.expandedSessions[date];
+                },
+                toggleRoundExpand(roundKey) {
+                    this.expandedRounds[roundKey] = !this.expandedRounds[roundKey];
+                },
+                saveRoundMatch(match) {
+                    const scoreA = parseInt(this.getRoundScore(match.id, 1, 'A')) || 0;
+                    const scoreB = parseInt(this.getRoundScore(match.id, 1, 'B')) || 0;
+
+                    if (scoreA === 0 && scoreB === 0) {
+                        alert('Please enter scores');
+                        return;
+                    }
+
+                    // Create match record
+                    const matchRecord = {
+                        id: this.generateMatchId(),
+                        tournamentId: match.tournamentId,
+                        date: match.date,
+                        format: match.format,
+                        teamA: match.teamA,
+                        teamB: match.teamB,
+                        scoreA: scoreA,
+                        scoreB: scoreB,
+                        winner: scoreA > scoreB ? 'A' : 'B',
+                        processed: false,
+                        notes: match.notes || ''
+                    };
+
+                    this.matches.push(matchRecord);
+                    this.processMatch(matchRecord);
+
+                    // Mark as saved
+                    if (!this.roundScores[match.id]) {
+                        this.roundScores[match.id] = {};
+                    }
+                    if (!this.roundScores[match.id][1]) {
+                        this.roundScores[match.id][1] = { A: scoreA, B: scoreB, saved: false };
+                    }
+                    this.roundScores[match.id][1].saved = true;
+
+                    this.saveData();
+                    alert('Match saved successfully!');
+                },
+                getTotalScore(scheduleId, team) {
+                    if (!this.roundScores[scheduleId]) return 0;
+
+                    let total = 0;
+                    Object.keys(this.roundScores[scheduleId]).forEach(round => {
+                        const roundData = this.roundScores[scheduleId][round];
+                        if (roundData.saved && roundData[team] !== '') {
+                            total += parseInt(roundData[team]) || 0;
+                        }
+                    });
+                    return total;
+                },
+                allRoundsSaved(scheduleId, totalRounds) {
+                    if (!this.roundScores[scheduleId]) return false;
+
+                    for (let i = 1; i <= totalRounds; i++) {
+                        if (!this.isRoundSaved(scheduleId, i)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+                finalizeMatch(schedule) {
+                    const scoreA = this.getTotalScore(schedule.id, 'A');
+                    const scoreB = this.getTotalScore(schedule.id, 'B');
+
+                    // Create match with rounds data
+                    const match = {
+                        id: this.generateMatchId(),
+                        date: schedule.date,
+                        format: schedule.format,
+                        teamA: [...schedule.teamA],
+                        teamB: [...schedule.teamB],
+                        scoreA: scoreA,
+                        scoreB: scoreB,
+                        winner: scoreA > scoreB ? 'A' : 'B',
+                        rounds: JSON.parse(JSON.stringify(this.roundScores[schedule.id])), // Store round details
+                        processed: false,
+                        notes: schedule.notes || ''
+                    };
+
+                    this.matches.push(match);
+
+                    // Auto-process
+                    this.processMatch(match);
+
+                    // Clean up
+                    delete this.roundScores[schedule.id];
+                    delete this.expandedSchedules[schedule.id];
+
+                    this.saveData();
+                    alert('Match recorded successfully!');
+                },
+
+                // Tournament Leaderboard Methods
+                createTournamentSnapshot(tournamentId, date, notes) {
+                    // Capture current player stats before tournament starts
+                    const snapshot = {
+                        tournamentId: tournamentId,
+                        date: date,
+                        notes: notes || '',
+                        startTime: new Date().toISOString(),
+                        endTime: null,
+                        status: 'active', // 'active' or 'completed'
+                        playerStatsBefore: this.players.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            rating: p.rating,
+                            wins: p.wins,
+                            losses: p.losses
+                        })),
+                        playerStatsAfter: null,
+                        tournamentStandings: null
+                    };
+
+                    this.tournamentLeaderboards.push(snapshot);
+                },
+
+                getTournamentStats(tournamentId) {
+                    // Calculate stats for a specific tournament
+                    const tournamentMatches = this.matches.filter(m => m.tournamentId === tournamentId);
+                    const playerStats = {};
+
+                    // Initialize stats for all players in tournament
+                    tournamentMatches.forEach(match => {
+                        [...match.teamA, ...match.teamB].forEach(playerId => {
+                            if (!playerStats[playerId]) {
+                                const player = this.players.find(p => p.id === playerId);
+                                if (player) {
+                                    playerStats[playerId] = {
+                                        id: playerId,
+                                        name: player.name,
+                                        gamesPlayed: 0,
+                                        wins: 0,
+                                        losses: 0,
+                                        pointsScored: 0,
+                                        pointsConceded: 0
+                                    };
+                                }
+                            }
+                        });
+                    });
+
+                    // Calculate stats from matches
+                    tournamentMatches.forEach(match => {
+                        match.teamA.forEach(playerId => {
+                            if (playerStats[playerId]) {
+                                playerStats[playerId].gamesPlayed++;
+                                playerStats[playerId].pointsScored += match.scoreA || 0;
+                                playerStats[playerId].pointsConceded += match.scoreB || 0;
+                                if (match.winner === 'A') {
+                                    playerStats[playerId].wins++;
+                                } else {
+                                    playerStats[playerId].losses++;
+                                }
+                            }
+                        });
+
+                        match.teamB.forEach(playerId => {
+                            if (playerStats[playerId]) {
+                                playerStats[playerId].gamesPlayed++;
+                                playerStats[playerId].pointsScored += match.scoreB || 0;
+                                playerStats[playerId].pointsConceded += match.scoreA || 0;
+                                if (match.winner === 'B') {
+                                    playerStats[playerId].wins++;
+                                } else {
+                                    playerStats[playerId].losses++;
+                                }
+                            }
+                        });
+                    });
+
+                    return Object.values(playerStats).sort((a, b) => {
+                        // Sort by wins first, then by point differential
+                        if (b.wins !== a.wins) return b.wins - a.wins;
+                        const diffA = a.pointsScored - a.pointsConceded;
+                        const diffB = b.pointsScored - b.pointsConceded;
+                        return diffB - diffA;
+                    });
+                },
+
+                finalizeTournamentSnapshot(tournamentId) {
+                    const snapshot = this.tournamentLeaderboards.find(t => t.tournamentId === tournamentId);
+                    if (!snapshot) return;
+
+                    // Capture current player stats after tournament
+                    snapshot.playerStatsAfter = this.players.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        rating: p.rating,
+                        wins: p.wins,
+                        losses: p.losses
+                    }));
+
+                    // Calculate and save tournament-specific standings
+                    snapshot.tournamentStandings = this.getTournamentStats(tournamentId);
+                    snapshot.endTime = new Date().toISOString();
+                    snapshot.status = 'completed';
+                },
+
+                getTournamentLeaderboard(tournamentId) {
+                    return this.tournamentLeaderboards.find(t => t.tournamentId === tournamentId);
+                },
+
+                getLiveTournamentStandings(tournamentId) {
+                    const leaderboard = this.getTournamentLeaderboard(tournamentId);
+                    if (!leaderboard) return [];
+
+                    // If completed, return the finalized standings
+                    if (leaderboard.status === 'completed' && leaderboard.tournamentStandings) {
+                        return leaderboard.tournamentStandings;
+                    }
+
+                    // If active, calculate live standings from matches
+                    return this.getTournamentStats(tournamentId);
+                },
+
+                // Data Management
+                deleteTodaysMatches() {
+                    const today = new Date().toISOString().split('T')[0];
+                    const todaysMatches = this.matches.filter(m => m.date === today);
+
+                    if (todaysMatches.length === 0) {
+                        alert('No matches recorded today');
+                        return;
+                    }
+
+                    if (!confirm(`Delete ${todaysMatches.length} matches recorded today? This will also revert rating changes.`)) {
+                        return;
+                    }
+
+                    // Get match IDs to delete
+                    const matchIdsToDelete = todaysMatches.map(m => m.id);
+
+                    // Remove rating history for these matches
+                    this.ratingsHistory = this.ratingsHistory.filter(h => !matchIdsToDelete.includes(h.matchId));
+
+                    // Recalculate player ratings from scratch
+                    // Reset all players to base rating
+                    this.players.forEach(player => {
+                        player.rating = 200;
+                        player.gamesPlayed = 0;
+                        player.wins = 0;
+                        player.losses = 0;
+                    });
+
+                    // Remove today's matches
+                    this.matches = this.matches.filter(m => m.date !== today);
+
+                    // Reprocess all remaining matches in chronological order
+                    const processedMatches = this.matches.filter(m => m.processed).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    // Reset processed flag
+                    this.matches.forEach(m => m.processed = false);
+
+                    // Clear ratings history (will be rebuilt)
+                    this.ratingsHistory = [];
+
+                    // Reprocess each match
+                    processedMatches.forEach(match => {
+                        this.processMatch(match);
+                    });
+
+                    this.saveData();
+                    alert(`Deleted ${todaysMatches.length} matches from today and recalculated all ratings!`);
+                },
+                recalculateAllRatings() {
+                    if (!confirm('Recalculate all ratings starting from 200?\n\nThis will:\n- Reset all players to 200\n- Reprocess all match history\n- Keep all matches intact\n\nContinue?')) {
+                        return;
+                    }
+
+                    // Reset all players to base rating of 200
+                    this.players.forEach(player => {
+                        player.rating = 200;
+                        player.gamesPlayed = 0;
+                        player.wins = 0;
+                        player.losses = 0;
+                    });
+
+                    // Get all processed matches in chronological order
+                    const processedMatches = this.matches.filter(m => m.processed).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    // Reset processed flag on all matches
+                    this.matches.forEach(m => m.processed = false);
+
+                    // Clear ratings history (will be rebuilt)
+                    this.ratingsHistory = [];
+
+                    // Reprocess each match in order
+                    processedMatches.forEach(match => {
+                        this.processMatch(match);
+                    });
+
+                    this.saveData();
+                    alert(`Successfully recalculated all ratings from 200! Processed ${processedMatches.length} matches.`);
+                },
+                saveData() {
+                    const data = {
+                        players: this.players,
+                        matches: this.matches,
+                        ratingsHistory: this.ratingsHistory,
+                        schedules: this.schedules,
+                        tournamentLeaderboards: this.tournamentLeaderboards
+                    };
+                    localStorage.setItem('pickleballData', JSON.stringify(data));
+                },
+                async loadData() {
+                    const saved = localStorage.getItem('pickleballData');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        this.players = data.players || [];
+                        this.matches = data.matches || [];
+                        this.ratingsHistory = data.ratingsHistory || [];
+                        this.schedules = data.schedules || [];
+                        this.tournamentLeaderboards = data.tournamentLeaderboards || [];
+                    } else {
+                        // Load initial data from JSON file
+                        try {
+                            const response = await fetch('initial_data.json');
+                            const data = await response.json();
+                            this.players = data.players || [];
+                            this.matches = data.matches || [];
+                            this.ratingsHistory = data.ratingsHistory || [];
+                            this.schedules = data.schedules || [];
+                            this.tournamentLeaderboards = data.tournamentLeaderboards || [];
+                            this.saveData(); // Save to localStorage
+                        } catch (error) {
+                            console.error('Failed to load initial data:', error);
+                        }
+                    }
+
+                    // Check admin status
+                    if (localStorage.getItem('isAdmin') === 'true') {
+                        this.isAdmin = true;
+                    }
+                },
+                exportJSON() {
+                    const data = {
+                        players: this.players,
+                        matches: this.matches,
+                        ratingsHistory: this.ratingsHistory,
+                        tournamentLeaderboards: this.tournamentLeaderboards,
+                        schedules: this.schedules,
+                        exportDate: new Date().toISOString()
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `pickleball-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                },
+                exportCSV() {
+                    let csv = 'ID,Name,Rating,Games Played,Wins,Losses,Win %\n';
+                    this.sortedPlayers.forEach(player => {
+                        const winPct = player.gamesPlayed > 0 ? Math.round(player.wins / player.gamesPlayed * 100) : 0;
+                        csv += `${player.id},${player.name},${Math.round(player.rating)},${player.gamesPlayed},${player.wins},${player.losses},${winPct}\n`;
+                    });
+                    
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `pickleball-players-${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                },
+                handleFileImport(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (confirm('This will replace all current data. Are you sure?')) {
+                                this.players = data.players || [];
+                                this.matches = data.matches || [];
+                                this.ratingsHistory = data.ratingsHistory || [];
+                                this.schedules = data.schedules || [];
+                                this.tournamentLeaderboards = data.tournamentLeaderboards || [];
+                                this.saveData();
+                                alert('Data imported successfully!');
+                            }
+                        } catch (error) {
+                            alert('Error importing file. Please ensure it\'s a valid JSON backup.');
+                        }
+                    };
+                    reader.readAsText(file);
+                },
+                clearAllData() {
+                    if (confirm('This will delete ALL data. This cannot be undone. Are you sure?')) {
+                        if (confirm('Are you really sure? All players, matches, and schedules will be lost!')) {
+                            this.players = [];
+                            this.matches = [];
+                            this.ratingsHistory = [];
+                            this.schedules = [];
+                            this.tournamentLeaderboards = [];
+                            this.saveData();
+                            alert('All data has been cleared.');
+                        }
+                    }
+                },
+                printLeague() {
+                    window.print();
+                },
+
+                // Utility Methods
+                formatDate(date) {
+                    return new Date(date).toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                },
+                getPlayerName(playerId) {
+                    const player = this.players.find(p => p.id === playerId);
+                    return player ? player.name : 'Unknown';
+                },
+                getTeamNames(playerIds) {
+                    return playerIds.map(id => this.getPlayerName(id)).join(' & ');
+                },
+                fillFromSchedule(schedule) {
+                    this.newMatch.format = schedule.format || 'doubles';
+                    this.newMatch.date = schedule.date;
+                    this.newMatch.teamA = [...schedule.teamA];
+                    this.newMatch.teamB = [...schedule.teamB];
+                    this.newMatch.notes = `Court ${schedule.court} - ${schedule.notes || ''}`;
+                    this.newMatch.scheduleId = schedule.id;
+                    // Scroll to form
+                    setTimeout(() => {
+                        const formSection = document.querySelector('select[multiple]');
+                        if (formSection) {
+                            formSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 100);
+                }
+            },
+            mounted() {
+                this.loadData();
+            }
+        }).mount('#app');
+    </script>
+
+    <style>
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #app .bg-white.rounded-lg.shadow {
+                visibility: visible;
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+        }
+    </style>
+</body>
+</html>
