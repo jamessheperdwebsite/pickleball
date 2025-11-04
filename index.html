@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +7,7 @@
     <title>Pickleball Club Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         [v-cloak] { display: none; }
         
@@ -1145,6 +1147,13 @@
     </div>
 
     <script>
+        const { createClient } = supabase;
+        
+        // Initialize Supabase
+        const supabaseUrl = 'https://lbymuskkehekukdhdrim.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxieW11c2trZWhla3VrZGhkcmltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDg4ODgsImV4cCI6MjA3NzgyNDg4OH0.jqdjt6rNGBaydAfhgwh_lhF0rJ-5Yd-RnQ8_LHWvbO4';
+        const sb = createClient(supabaseUrl, supabaseKey);
+
         const { createApp } = Vue;
 
         createApp({
@@ -2847,38 +2856,98 @@
                     this.saveData();
                     alert(`Successfully recalculated all ratings from 200! Processed ${processedMatches.length} matches.`);
                 },
-                saveData() {
-                    const data = {
-                        players: this.players,
-                        matches: this.matches,
-                        ratingsHistory: this.ratingsHistory,
-                        schedules: this.schedules,
-                        tournamentLeaderboards: this.tournamentLeaderboards
-                    };
-                    localStorage.setItem('pickleballData', JSON.stringify(data));
+                async saveData() {
+                    try {
+                        // Save players
+                        for (const player of this.players) {
+                            await sb.from('players').upsert(player);
+                        }
+                        
+                        // Save matches
+                        for (const match of this.matches) {
+                            await sb.from('matches').upsert(match);
+                        }
+                        
+                        // Save ratings history
+                        for (const rating of this.ratingsHistory) {
+                            await sb.from('ratings_history').upsert(rating);
+                        }
+                        
+                        // Save schedules
+                        for (const schedule of this.schedules) {
+                            await sb.from('schedules').upsert(schedule);
+                        }
+                        
+                        console.log('Data saved to Supabase successfully');
+                    } catch (error) {
+                        console.error('Error saving to Supabase:', error);
+                        // Fallback to localStorage
+                        const data = {
+                            players: this.players,
+                            matches: this.matches,
+                            ratingsHistory: this.ratingsHistory,
+                            schedules: this.schedules,
+                            tournamentLeaderboards: this.tournamentLeaderboards
+                        };
+                        localStorage.setItem('pickleballData', JSON.stringify(data));
+                    }
                 },
                 async loadData() {
-                    const saved = localStorage.getItem('pickleballData');
-                    if (saved) {
-                        const data = JSON.parse(saved);
-                        this.players = data.players || [];
-                        this.matches = data.matches || [];
-                        this.ratingsHistory = data.ratingsHistory || [];
-                        this.schedules = data.schedules || [];
-                        this.tournamentLeaderboards = data.tournamentLeaderboards || [];
-                    } else {
-                        // Load initial data from JSON file
-                        try {
-                            const response = await fetch('initial_data.json');
-                            const data = await response.json();
+                    try {
+                        // Load from Supabase
+                        const [playersResponse, matchesResponse, ratingsResponse, schedulesResponse] = await Promise.all([
+                            sb.from('players').select('*'),
+                            sb.from('matches').select('*'),
+                            sb.from('ratings_history').select('*'),
+                            sb.from('schedules').select('*')
+                        ]);
+
+                        this.players = playersResponse.data || [];
+                        this.matches = matchesResponse.data || [];
+                        this.ratingsHistory = ratingsResponse.data || [];
+                        this.schedules = schedulesResponse.data || [];
+                        this.tournamentLeaderboards = [];
+
+                        // If no data in Supabase, try localStorage or initial data
+                        if (this.players.length === 0) {
+                            const saved = localStorage.getItem('pickleballData');
+                            if (saved) {
+                                const data = JSON.parse(saved);
+                                this.players = data.players || [];
+                                this.matches = data.matches || [];
+                                this.ratingsHistory = data.ratingsHistory || [];
+                                this.schedules = data.schedules || [];
+                                this.tournamentLeaderboards = data.tournamentLeaderboards || [];
+                                this.saveData(); // Migrate to Supabase
+                            } else {
+                                // Load initial data
+                                try {
+                                    const response = await fetch('sample-data.json');
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        this.players = data.players || [];
+                                        this.matches = data.matches || [];
+                                        this.ratingsHistory = data.ratingsHistory || [];
+                                        this.schedules = data.schedules || [];
+                                        this.tournamentLeaderboards = [];
+                                        this.saveData(); // Save to Supabase
+                                    }
+                                } catch (error) {
+                                    console.error('Failed to load initial data:', error);
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error loading from Supabase:', error);
+                        // Fallback to localStorage
+                        const saved = localStorage.getItem('pickleballData');
+                        if (saved) {
+                            const data = JSON.parse(saved);
                             this.players = data.players || [];
                             this.matches = data.matches || [];
                             this.ratingsHistory = data.ratingsHistory || [];
                             this.schedules = data.schedules || [];
                             this.tournamentLeaderboards = data.tournamentLeaderboards || [];
-                            this.saveData(); // Save to localStorage
-                        } catch (error) {
-                            console.error('Failed to load initial data:', error);
                         }
                     }
 
