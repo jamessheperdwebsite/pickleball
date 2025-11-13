@@ -118,7 +118,7 @@
 <body>
     <div id="app" v-cloak class="min-h-screen" style="background-color: var(--soft-light-gray);">
         <!-- Header -->
-        <div class="gradient-bg text-white shadow-2xl">
+        <div class="text-white shadow-2xl" style="background-color: #4c1f5f;">
             <div class="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
                 <div class="flex items-center justify-center flex-1">
                     <img src="PICK.png" alt="David Lloyd Coventry Pickleball Social" class="h-24 md:h-32">
@@ -146,10 +146,10 @@
                     <h2 class="text-2xl font-bold text-gray-800 mb-2">Admin Access</h2>
                     <p class="text-gray-600">Enter your credentials to continue</p>
                 </div>
-                <input 
-                    v-model="adminPassword" 
-                    type="password" 
-                    placeholder="Enter admin password" 
+                <input
+                    v-model="adminPassword"
+                    type="password"
+                    placeholder="Enter admin password"
                     @keyup.enter="attemptLogin"
                     class="w-full p-4 border border-gray-200 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
                 >
@@ -162,6 +162,95 @@
                     </button>
                 </div>
                 <p class="text-sm text-gray-500 mt-4 text-center">Default password: <code class="bg-gray-100 px-2 py-1 rounded">admin123</code></p>
+            </div>
+        </div>
+
+        <!-- Edit Match Modal -->
+        <div v-if="editingMatch" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div class="glass-effect p-8 rounded-2xl shadow-2xl max-w-2xl w-full m-4 border border-white border-opacity-20 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Edit Match</h2>
+                        <p class="text-sm text-gray-600">ID: {{ editingMatch.id }}</p>
+                    </div>
+                    <button @click="closeEditMatch" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div>
+                            <p class="font-semibold text-yellow-800">Warning</p>
+                            <p class="text-sm text-yellow-700">Editing this match will reverse the original rating changes and recalculate based on new scores.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm font-semibold text-gray-700 mb-2">Team A</p>
+                            <p class="text-gray-800">{{ getTeamNames(editingMatch.teamA) }}</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm font-semibold text-gray-700 mb-2">Team B</p>
+                            <p class="text-gray-800">{{ getTeamNames(editingMatch.teamB) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Team A Score</label>
+                            <input v-model.number="editMatchForm.scoreA" type="number" min="0"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Team B Score</label>
+                            <input v-model.number="editMatchForm.scoreB" type="number" min="0"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Match Date</label>
+                        <input v-model="editMatchForm.date" type="date"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Notes (optional)</label>
+                        <textarea v-model="editMatchForm.notes" rows="2"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-800">
+                            <span class="font-semibold">Current Result:</span>
+                            {{ editingMatch.scoreA }} - {{ editingMatch.scoreB }}
+                            (Winner: {{ editingMatch.winner === 'Draw' ? 'Draw' : 'Team ' + editingMatch.winner }})
+                        </p>
+                        <p class="text-sm text-blue-800 mt-1">
+                            <span class="font-semibold">New Result:</span>
+                            {{ editMatchForm.scoreA }} - {{ editMatchForm.scoreB }}
+                            (Winner: {{ editMatchForm.scoreA > editMatchForm.scoreB ? 'Team A' : editMatchForm.scoreB > editMatchForm.scoreA ? 'Team B' : 'Draw' }})
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button @click="saveMatchEdit" class="flex-1 btn-primary text-white px-6 py-3 rounded-xl font-semibold">
+                        Save Changes
+                    </button>
+                    <button @click="closeEditMatch" class="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-300 transition-all duration-300 font-semibold">
+                        Cancel
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -424,9 +513,11 @@
                             <tr>
                                 <th class="text-left p-4 font-semibold text-gray-700">Rank</th>
                                 <th class="text-left p-4 font-semibold text-gray-700">Player</th>
+                                <th class="text-center p-4 font-semibold text-gray-700">Points</th>
                                 <th class="text-center p-4 font-semibold text-gray-700">Rating</th>
                                 <th class="text-center p-4 font-semibold text-gray-700">Games</th>
                                 <th class="text-center p-4 font-semibold text-gray-700">Wins</th>
+                                <th class="text-center p-4 font-semibold text-gray-700">Draws</th>
                                 <th class="text-center p-4 font-semibold text-gray-700">Losses</th>
                                 <th class="text-center p-4 font-semibold text-gray-700">Win %</th>
                             </tr>
@@ -457,6 +548,11 @@
                                     </div>
                                 </td>
                                 <td class="text-center p-4">
+                                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
+                                        {{ (player.filteredWins * 3) + (player.filteredDraws * 1) }}
+                                    </span>
+                                </td>
+                                <td class="text-center p-4">
                                     <span class="rating-badge px-3 py-1 rounded-full text-sm font-bold">
                                         {{ leagueFilter === 'overall' ? Math.round(player.rating) : Math.round(player.filteredRating) }}
                                     </span>
@@ -465,6 +561,11 @@
                                 <td class="text-center p-4">
                                     <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
                                         {{ player.filteredWins }}
+                                    </span>
+                                </td>
+                                <td class="text-center p-4">
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
+                                        {{ player.filteredDraws }}
                                     </span>
                                 </td>
                                 <td class="text-center p-4">
@@ -671,17 +772,25 @@
                 </div>
                 <div v-else class="space-y-3">
                     <div v-for="match in recentMatches" :key="match.id" class="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div class="flex justify-between items-start mb-2 cursor-pointer" @click="toggleMatchExpand(match.id)">
-                            <div class="flex items-center gap-3">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-3 cursor-pointer flex-1" @click="toggleMatchExpand(match.id)">
                                 <span class="text-sm text-gray-600">{{ formatDate(match.date) }}</span>
                                 <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">{{ match.format }}</span>
                                 <span v-if="match.rounds && Object.keys(match.rounds).length > 1" class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
                                     {{ Object.keys(match.rounds).length }} Rounds
                                 </span>
                             </div>
-                            <button class="text-gray-500 hover:text-gray-700">
-                                {{ expandedMatches[match.id] ? '▼' : '▶' }}
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button v-if="isAdmin" @click="openEditMatch(match)" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-blue-600 transition-all">
+                                    Edit
+                                </button>
+                                <button v-if="isAdmin" @click="deleteMatch(match)" class="bg-red-500 text-white px-3 py-1 rounded-lg text-xs hover:bg-red-600 transition-all">
+                                    Delete
+                                </button>
+                                <button class="text-gray-500 hover:text-gray-700" @click="toggleMatchExpand(match.id)">
+                                    {{ expandedMatches[match.id] ? '▼' : '▶' }}
+                                </button>
+                            </div>
                         </div>
                         <div class="grid md:grid-cols-3 gap-4 items-center">
                             <div>
@@ -912,6 +1021,170 @@
                     </div>
                 </div>
 
+                <!-- Custom Tournament Builder -->
+                <div v-if="showCustomTournament" class="bg-gradient-to-r from-green-50 to-teal-50 border-2 border-green-300 rounded-xl p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">Custom Tournament Builder</h3>
+                            <p class="text-sm text-gray-600">Manually select and arrange matches for your tournament</p>
+                        </div>
+                        <button @click="cancelCustomTournament" class="text-gray-500 hover:text-gray-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Tournament Settings -->
+                    <div class="grid md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Tournament Name</label>
+                            <input v-model="customTournament.name" type="text" class="w-full p-2 border rounded" placeholder="e.g., Weekend Cup">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Date</label>
+                            <input v-model="customTournament.date" type="date" class="w-full p-2 border rounded">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Format</label>
+                            <select v-model="customTournament.format" class="w-full p-2 border rounded">
+                                <option value="singles">Singles</option>
+                                <option value="doubles">Doubles</option>
+                                <option value="2v1">2v1</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Rounds Section -->
+                    <div class="bg-white rounded-lg p-4 mb-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-semibold text-gray-800">Rounds & Matches</h4>
+                            <button @click="addCustomRound" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-all">
+                                + Add Round
+                            </button>
+                        </div>
+
+                        <!-- Display Rounds -->
+                        <div v-if="customTournament.rounds.length === 0" class="text-center text-gray-500 py-8">
+                            No rounds added yet. Click "Add Round" to start building your tournament.
+                        </div>
+
+                        <div v-for="(round, roundIndex) in customTournament.rounds" :key="roundIndex" class="mb-4 border-2 border-gray-200 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h5 class="font-semibold text-gray-700">Round {{ roundIndex + 1 }}</h5>
+                                <div class="flex gap-2">
+                                    <button @click="addCustomMatch(roundIndex)" class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600">
+                                        + Add Match
+                                    </button>
+                                    <button @click="deleteCustomRound(roundIndex)" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">
+                                        Delete Round
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Court Assignment -->
+                            <div class="mb-3">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Courts for this round (comma-separated)</label>
+                                <input v-model="round.courts" type="text" class="w-full p-2 border rounded text-sm" placeholder="e.g., 1,2,3">
+                                <p class="text-xs text-gray-500 mt-1">Matches will be assigned to these courts in order</p>
+                            </div>
+
+                            <!-- Matches in this round -->
+                            <div v-if="round.matches.length === 0" class="text-center text-gray-400 py-4 text-sm">
+                                No matches in this round yet
+                            </div>
+
+                            <div v-for="(match, matchIndex) in round.matches" :key="matchIndex" class="bg-gray-50 rounded-lg p-3 mb-2">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-semibold text-gray-600">Match {{ matchIndex + 1 }}</span>
+                                    <button @click="deleteCustomMatch(roundIndex, matchIndex)" class="text-red-600 hover:text-red-800 text-xs">
+                                        Remove
+                                    </button>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <!-- Team A Selection -->
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Team A</label>
+                                        <select
+                                            v-if="customTournament.format === 'singles' || (customTournament.format === '2v1' && match.teamA.length === 1)"
+                                            v-model="match.teamA[0]"
+                                            class="w-full p-2 border rounded text-sm"
+                                        >
+                                            <option value="">Select Player</option>
+                                            <option v-for="player in players" :key="player.id" :value="player.id">
+                                                {{ player.name }}
+                                            </option>
+                                        </select>
+                                        <div v-else class="space-y-1">
+                                            <select v-model="match.teamA[0]" class="w-full p-1 border rounded text-xs">
+                                                <option value="">Player 1</option>
+                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                    {{ player.name }}
+                                                </option>
+                                            </select>
+                                            <select v-model="match.teamA[1]" class="w-full p-1 border rounded text-xs">
+                                                <option value="">Player 2</option>
+                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                    {{ player.name }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Team B Selection -->
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Team B</label>
+                                        <select
+                                            v-if="customTournament.format === 'singles' || (customTournament.format === '2v1' && match.teamB.length === 1)"
+                                            v-model="match.teamB[0]"
+                                            class="w-full p-2 border rounded text-sm"
+                                        >
+                                            <option value="">Select Player</option>
+                                            <option v-for="player in players" :key="player.id" :value="player.id">
+                                                {{ player.name }}
+                                            </option>
+                                        </select>
+                                        <div v-else class="space-y-1">
+                                            <select v-model="match.teamB[0]" class="w-full p-1 border rounded text-xs">
+                                                <option value="">Player 1</option>
+                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                    {{ player.name }}
+                                                </option>
+                                            </select>
+                                            <select v-model="match.teamB[1]" class="w-full p-1 border rounded text-xs">
+                                                <option value="">Player 2</option>
+                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                    {{ player.name }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Games per match -->
+                                <div class="mt-2">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Games</label>
+                                    <input v-model.number="match.rounds" type="number" min="1" max="10" class="w-full p-1 border rounded text-sm" placeholder="e.g., 3">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Tournament Button -->
+                    <div class="flex gap-3">
+                        <button @click="saveCustomTournament" class="flex-1 bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 rounded-xl font-semibold">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Save Custom Tournament to Schedule
+                        </button>
+                        <button @click="cancelCustomTournament" class="bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-400">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+
                 <div class="space-y-4">
                     <!-- Match Format -->
                     <div>
@@ -984,7 +1257,7 @@
                     </div>
 
                     <!-- Generate Buttons -->
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-3 gap-4">
                         <button @click="generateSchedule" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300">
                             <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -995,7 +1268,13 @@
                             <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                             </svg>
-                            Multi-Round Tournament
+                            Multi-Round
+                        </button>
+                        <button @click="showCustomTournament = true" class="bg-gradient-to-r from-green-500 to-teal-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Custom Tournament
                         </button>
                     </div>
 
@@ -1123,6 +1402,116 @@
                     </div>
                 </div>
 
+                <!-- Rating Algorithm Documentation -->
+                <div class="mt-6 border-2 border-purple-200 rounded-xl p-6 bg-gradient-to-r from-purple-50 to-pink-50">
+                    <h3 class="text-xl font-bold mb-4 flex items-center text-purple-800">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        How Player Ratings Work
+                    </h3>
+
+                    <div class="bg-white rounded-lg p-5 shadow-sm mb-4">
+                        <h4 class="font-bold text-gray-800 mb-3 text-lg">The Simple Version</h4>
+                        <div class="space-y-3 text-gray-700">
+                            <p class="text-base leading-relaxed">
+                                Your rating goes up when you win and down when you lose. <strong>How much it changes depends on who you beat.</strong>
+                            </p>
+                            <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                                <p class="font-semibold text-green-800 mb-2">Beat someone better than you? 🎉</p>
+                                <p class="text-sm text-green-700">You gain lots of points (up to 16 points)</p>
+                            </div>
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                                <p class="font-semibold text-blue-800 mb-2">Beat someone at your level? 👍</p>
+                                <p class="text-sm text-blue-700">You gain a moderate amount (around 8 points)</p>
+                            </div>
+                            <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
+                                <p class="font-semibold text-orange-800 mb-2">Beat someone weaker than you? 😐</p>
+                                <p class="text-sm text-orange-700">You only gain a few points (maybe 3-5 points)</p>
+                            </div>
+                            <div class="bg-gray-50 border-l-4 border-gray-500 p-4 rounded">
+                                <p class="font-semibold text-gray-800 mb-2">Draw with anyone? 🤝</p>
+                                <p class="text-sm text-gray-700">Your rating moves slightly toward theirs</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <!-- Real Examples -->
+                        <div class="bg-white rounded-lg p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-3">Real Examples</h4>
+                            <div class="space-y-3">
+                                <div class="bg-purple-50 p-3 rounded border border-purple-200">
+                                    <p class="font-semibold text-purple-900 mb-1 text-sm">Expected Win</p>
+                                    <p class="text-sm text-gray-700">You're rated 250, they're rated 200</p>
+                                    <p class="text-sm text-gray-700 mt-1">You win → <span class="text-green-600 font-bold">+11 points</span></p>
+                                    <p class="text-sm text-gray-700">You lose → <span class="text-red-600 font-bold">-21 points</span></p>
+                                </div>
+                                <div class="bg-pink-50 p-3 rounded border border-pink-200">
+                                    <p class="font-semibold text-pink-900 mb-1 text-sm">Big Upset!</p>
+                                    <p class="text-sm text-gray-700">You're rated 200, they're rated 250</p>
+                                    <p class="text-sm text-gray-700 mt-1">You win → <span class="text-green-600 font-bold">+21 points!</span></p>
+                                    <p class="text-sm text-gray-700">You lose → <span class="text-red-600 font-bold">-11 points</span></p>
+                                </div>
+                                <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                                    <p class="font-semibold text-blue-900 mb-1 text-sm">Even Match</p>
+                                    <p class="text-sm text-gray-700">Both rated 225</p>
+                                    <p class="text-sm text-gray-700 mt-1">You win → <span class="text-green-600 font-bold">+16 points</span></p>
+                                    <p class="text-sm text-gray-700">Draw → <span class="text-gray-600 font-bold">±0 points</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Facts -->
+                        <div class="bg-white rounded-lg p-4 shadow-sm">
+                            <h4 class="font-bold text-gray-800 mb-3">Quick Facts</h4>
+                            <div class="space-y-3 text-sm text-gray-700">
+                                <div class="flex items-start">
+                                    <span class="text-purple-600 mr-2 text-xl">🎯</span>
+                                    <p><span class="font-semibold">Everyone starts at 200</span> - Your rating goes up or down from there</p>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-purple-600 mr-2 text-xl">👥</span>
+                                    <p><span class="font-semibold">Teams average their ratings</span> - If you're 220 and partner is 180, your team is rated 200</p>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-purple-600 mr-2 text-xl">🤝</span>
+                                    <p><span class="font-semibold">Partners share the change</span> - Both teammates get the same rating change</p>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-purple-600 mr-2 text-xl">📊</span>
+                                    <p><span class="font-semibold">Maximum change: 16 points</span> - You can't gain or lose more than this per match</p>
+                                </div>
+                                <div class="flex items-start">
+                                    <span class="text-purple-600 mr-2 text-xl">🏆</span>
+                                    <p><span class="font-semibold">Beat better players!</span> - That's how you climb the rankings fastest</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Points System Info -->
+                    <div class="mt-4 bg-white rounded-lg p-4 shadow-sm border-2 border-green-200">
+                        <h4 class="font-bold text-gray-800 mb-3">League Points System (Separate from Ratings)</h4>
+                        <p class="text-sm text-gray-600 mb-3">We also track traditional league points for tournaments:</p>
+                        <div class="flex gap-6 text-sm flex-wrap">
+                            <div class="flex items-center">
+                                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full font-semibold mr-2">Win</span>
+                                <span class="text-gray-700 font-semibold">3 points</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-semibold mr-2">Draw</span>
+                                <span class="text-gray-700 font-semibold">1 point</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full font-semibold mr-2">Loss</span>
+                                <span class="text-gray-700 font-semibold">0 points</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-3 bg-gray-50 p-2 rounded">💡 Your <strong>rating</strong> shows your skill level, while <strong>points</strong> show your tournament performance</p>
+                    </div>
+                </div>
+
                 <!-- Statistics -->
                 <div class="mt-6 grid md:grid-cols-4 gap-4">
                     <div class="bg-gray-50 p-4 rounded-lg text-center">
@@ -1215,12 +1604,30 @@
                         teamB: ['', ''],
                         notes: ''
                     },
+
+                    // Custom Tournament Builder
+                    showCustomTournament: false,
+                    customTournament: {
+                        name: '',
+                        date: new Date().toISOString().split('T')[0],
+                        format: 'doubles',
+                        rounds: [] // Array of { courts: '', matches: [{teamA: [], teamB: [], rounds: 3}] }
+                    },
                     // Round recording tracking
                     expandedSchedules: {},
                     roundScores: {}, // { scheduleId: { roundNumber: { A: score, B: score, saved: boolean } } }
                     expandedMatches: {}, // Track expanded matches in history
                     expandedSessions: {}, // Track which date sessions are expanded
                     expandedRounds: {}, // Track which rounds are expanded
+
+                    // Edit match
+                    editingMatch: null,
+                    editMatchForm: {
+                        scoreA: 0,
+                        scoreB: 0,
+                        date: '',
+                        notes: ''
+                    },
 
                     // Tournament table viewing
                     viewTournamentId: '', // Input field for tournament ID to view
@@ -1381,6 +1788,7 @@
                             ...p,
                             filteredGames: p.gamesPlayed,
                             filteredWins: p.wins,
+                            filteredDraws: p.draws || 0,
                             filteredLosses: p.losses,
                             filteredRating: p.rating
                         }));
@@ -1427,6 +1835,7 @@
                     const playerStats = this.players.map(player => {
                         let games = 0;
                         let wins = 0;
+                        let draws = 0;
                         let losses = 0;
                         let ratingChanges = [];
 
@@ -1445,6 +1854,8 @@
                                 games++;
                                 if ((inTeamA && match.winner === 'A') || (inTeamB && match.winner === 'B')) {
                                     wins++;
+                                } else if (match.winner === 'Draw') {
+                                    draws++;
                                 } else {
                                     losses++;
                                 }
@@ -1464,6 +1875,7 @@
                             ...player,
                             filteredGames: games,
                             filteredWins: wins,
+                            filteredDraws: draws,
                             filteredLosses: losses,
                             filteredRating: filteredRating
                         };
@@ -1559,7 +1971,7 @@
                         this.saveData();
                     }
                 },
-                deleteTournament(tournamentId) {
+                async deleteTournament(tournamentId) {
                     const schedulesToDelete = this.schedules.filter(s => (s.tournamentId || s.date) === tournamentId);
                     const matchesToDelete = this.matches.filter(m => (m.tournamentId || m.date) === tournamentId);
 
@@ -1570,6 +1982,33 @@
                                       `- All associated rating changes will be reverted`;
 
                     if (!confirm(confirmMsg)) {
+                        return;
+                    }
+
+                    // Delete from Supabase first
+                    const { error: schedulesError } = await sb.from('schedules').delete().eq('tournamentId', tournamentId);
+                    if (schedulesError) {
+                        console.error('Error deleting schedules:', schedulesError);
+                        alert('Error deleting tournament schedules from database');
+                        return;
+                    }
+
+                    // Delete ratings history for all matches in this tournament
+                    const matchIds = matchesToDelete.map(m => m.id);
+                    if (matchIds.length > 0) {
+                        const { error: historyError } = await sb.from('ratings_history').delete().in('matchId', matchIds);
+                        if (historyError) {
+                            console.error('Error deleting ratings history:', historyError);
+                            alert('Error deleting tournament ratings history from database');
+                            return;
+                        }
+                    }
+
+                    // Delete matches last (after ratings history)
+                    const { error: matchesError } = await sb.from('matches').delete().eq('tournamentId', tournamentId);
+                    if (matchesError) {
+                        console.error('Error deleting matches:', matchesError);
+                        alert('Error deleting tournament matches from database');
                         return;
                     }
 
@@ -1629,7 +2068,7 @@
                         });
                     });
 
-                    this.saveData();
+                    await this.saveData();
                     alert('Tournament deleted successfully');
                 },
                 endTournament(tournamentId) {
@@ -1705,7 +2144,8 @@
                         teamB: [...this.newMatch.teamB],
                         scoreA: this.newMatch.scoreA,
                         scoreB: this.newMatch.scoreB,
-                        winner: this.newMatch.scoreA > this.newMatch.scoreB ? 'A' : 'B',
+                        winner: this.newMatch.scoreA > this.newMatch.scoreB ? 'A' :
+                                this.newMatch.scoreB > this.newMatch.scoreA ? 'B' : 'Draw',
                         processed: false,
                         notes: this.newMatch.notes
                     };
@@ -1735,7 +2175,7 @@
                 // Rating Methods
                 calculateElo(ratingA, ratingB, scoreA, scoreB, kFactor = 32) {
                     const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
-                    const actualA = scoreA > scoreB ? 1 : 0;
+                    const actualA = scoreA > scoreB ? 1 : scoreA < scoreB ? 0 : 0.5; // 1 for win, 0 for loss, 0.5 for draw
                     const changeA = kFactor * (actualA - expectedA);
                     return {
                         changeA: changeA,
@@ -1761,8 +2201,9 @@
                         player.rating += changes.changeA;
                         player.gamesPlayed++;
                         if (match.winner === 'A') player.wins++;
+                        else if (match.winner === 'Draw') player.draws = (player.draws || 0) + 1;
                         else player.losses++;
-                        
+
                         // Add to history
                         this.ratingsHistory.push({
                             id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
@@ -1774,14 +2215,15 @@
                             date: match.date
                         });
                     });
-                    
+
                     teamBPlayers.forEach(player => {
                         const oldRating = player.rating;
                         player.rating += changes.changeB;
                         player.gamesPlayed++;
                         if (match.winner === 'B') player.wins++;
+                        else if (match.winner === 'Draw') player.draws = (player.draws || 0) + 1;
                         else player.losses++;
-                        
+
                         // Add to history
                         this.ratingsHistory.push({
                             id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
@@ -1816,8 +2258,9 @@
                             player.rating += changes.changeA;
                             player.gamesPlayed++;
                             if (match.winner === 'A') player.wins++;
+                            else if (match.winner === 'Draw') player.draws = (player.draws || 0) + 1;
                             else player.losses++;
-                            
+
                             // Add to history
                             this.ratingsHistory.push({
                                 id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
@@ -1829,14 +2272,15 @@
                                 date: match.date
                             });
                         });
-                        
+
                         teamBPlayers.forEach(player => {
                             const oldRating = player.rating;
                             player.rating += changes.changeB;
                             player.gamesPlayed++;
                             if (match.winner === 'B') player.wins++;
+                            else if (match.winner === 'Draw') player.draws = (player.draws || 0) + 1;
                             else player.losses++;
-                            
+
                             // Add to history
                             this.ratingsHistory.push({
                                 id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
@@ -2397,33 +2841,53 @@
                     }
                     return arr;
                 },
-                saveGeneratedSchedule() {
-                    // Generate unique tournament ID based on timestamp
-                    const tournamentId = 'T' + Date.now();
+                async saveGeneratedSchedule() {
+                    try {
+                        console.log('saveGeneratedSchedule called');
+                        console.log('Generated schedule:', this.generatedSchedule);
 
-                    this.generatedSchedule.forEach(match => {
-                        const schedule = {
-                            id: 'S' + String(this.schedules.length + 1).padStart(3, '0'),
-                            tournamentId: tournamentId,
-                            date: this.scheduleGenerator.date,
-                            court: match.court,
-                            format: match.format,
-                            teamA: match.teamA,
-                            teamB: match.teamB,
-                            roundNumber: match.roundNumber || 1,
-                            rounds: this.scheduleGenerator.rounds || 1,
-                            notes: this.scheduleGenerator.notes
-                        };
-                        this.schedules.push(schedule);
-                    });
+                        if (this.generatedSchedule.length === 0) {
+                            alert('No schedule to save. Please generate a schedule first.');
+                            return;
+                        }
 
-                    // Create tournament snapshot
-                    this.createTournamentSnapshot(tournamentId, this.scheduleGenerator.date, this.scheduleGenerator.notes);
+                        // Generate unique tournament ID based on timestamp
+                        const tournamentId = 'T' + Date.now();
+                        console.log('Tournament ID:', tournamentId);
 
-                    this.saveData();
-                    this.generatedSchedule = [];
-                    this.scheduleGenerator.availablePlayers = [];
-                    alert('Schedule saved successfully!');
+                        let scheduleIndex = 0;
+                        this.generatedSchedule.forEach(match => {
+                            const schedule = {
+                                id: 'S' + String(this.schedules.length + scheduleIndex + 1).padStart(4, '0'),
+                                tournamentId: tournamentId,
+                                date: this.scheduleGenerator.date,
+                                court: match.court,
+                                format: match.format,
+                                teamA: match.teamA,
+                                teamB: match.teamB,
+                                rounds: this.scheduleGenerator.rounds || 1,
+                                notes: this.scheduleGenerator.notes
+                            };
+                            this.schedules.push(schedule);
+                            scheduleIndex++;
+                        });
+
+                        console.log('Schedules added to array, total schedules:', this.schedules.length);
+
+                        // Create tournament snapshot
+                        this.createTournamentSnapshot(tournamentId, this.scheduleGenerator.date, this.scheduleGenerator.notes);
+
+                        console.log('About to call saveData...');
+                        await this.saveData();
+                        console.log('saveData completed');
+
+                        this.generatedSchedule = [];
+                        this.scheduleGenerator.availablePlayers = [];
+                        alert('Schedule saved successfully!');
+                    } catch (error) {
+                        console.error('Error in saveGeneratedSchedule:', error);
+                        alert('Error saving schedule: ' + error.message);
+                    }
                 },
                 resetManualMatchPlayers() {
                     if (this.manualMatch.format === 'singles') {
@@ -2475,14 +2939,13 @@
                     const tournamentId = 'T' + Date.now();
 
                     const schedule = {
-                        id: 'S' + String(this.schedules.length + 1).padStart(3, '0'),
+                        id: 'S' + String(this.schedules.length + 1).padStart(4, '0'),
                         tournamentId: tournamentId,
                         date: this.manualMatch.date,
                         court: this.manualMatch.court,
                         format: this.manualMatch.format,
                         teamA: teamA,
                         teamB: teamB,
-                        roundNumber: 1,
                         rounds: this.manualMatch.rounds || 1,
                         notes: this.manualMatch.notes
                     };
@@ -2510,9 +2973,218 @@
                     };
                 },
 
+                // Custom Tournament Methods
+                addCustomRound() {
+                    this.customTournament.rounds.push({
+                        courts: '',
+                        matches: []
+                    });
+                },
+
+                deleteCustomRound(roundIndex) {
+                    if (confirm('Are you sure you want to delete this round?')) {
+                        this.customTournament.rounds.splice(roundIndex, 1);
+                    }
+                },
+
+                addCustomMatch(roundIndex) {
+                    const format = this.customTournament.format;
+                    const match = {
+                        teamA: format === 'singles' ? [''] : ['', ''],
+                        teamB: format === 'singles' ? [''] : ['', ''],
+                        rounds: 3
+                    };
+
+                    // Adjust for 2v1
+                    if (format === '2v1') {
+                        match.teamA = ['', ''];
+                        match.teamB = [''];
+                    }
+
+                    this.customTournament.rounds[roundIndex].matches.push(match);
+                },
+
+                deleteCustomMatch(roundIndex, matchIndex) {
+                    this.customTournament.rounds[roundIndex].matches.splice(matchIndex, 1);
+                },
+
+                async saveCustomTournament() {
+                    if (!this.customTournament.name) {
+                        alert('Please enter a tournament name');
+                        return;
+                    }
+
+                    if (this.customTournament.rounds.length === 0) {
+                        alert('Please add at least one round');
+                        return;
+                    }
+
+                    // Generate tournament ID
+                    const tournamentId = 'T' + Date.now();
+
+                    // Process each round
+                    let scheduleCount = 0;
+                    this.customTournament.rounds.forEach((round, roundIndex) => {
+                        const courts = round.courts.split(',').map(c => parseInt(c.trim())).filter(c => !isNaN(c));
+
+                        round.matches.forEach((match, matchIndex) => {
+                            // Filter out empty selections
+                            const teamA = match.teamA.filter(p => p !== '');
+                            const teamB = match.teamB.filter(p => p !== '');
+
+                            // Validate teams
+                            if (teamA.length === 0 || teamB.length === 0) {
+                                return; // Skip incomplete matches
+                            }
+
+                            // Assign court
+                            const court = courts[matchIndex % courts.length] || matchIndex + 1;
+
+                            // Create schedule entry
+                            const schedule = {
+                                id: 'S' + String(this.schedules.length + scheduleCount + 1).padStart(4, '0'),
+                                tournamentId: tournamentId,
+                                date: this.customTournament.date,
+                                court: court,
+                                format: this.customTournament.format,
+                                teamA: teamA,
+                                teamB: teamB,
+                                rounds: match.rounds || 3,
+                                notes: this.customTournament.name
+                            };
+
+                            this.schedules.push(schedule);
+                            scheduleCount++;
+                        });
+                    });
+
+                    if (scheduleCount === 0) {
+                        alert('No valid matches were created. Please fill in the teams.');
+                        return;
+                    }
+
+                    await this.saveData();
+                    alert(`Custom tournament "${this.customTournament.name}" created with ${scheduleCount} matches!`);
+                    this.cancelCustomTournament();
+                },
+
+                cancelCustomTournament() {
+                    this.showCustomTournament = false;
+                    this.customTournament = {
+                        name: '',
+                        date: new Date().toISOString().split('T')[0],
+                        format: 'doubles',
+                        rounds: []
+                    };
+                },
+
                 // Match History Methods
                 toggleMatchExpand(matchId) {
                     this.expandedMatches[matchId] = !this.expandedMatches[matchId];
+                },
+
+                // Edit Match Methods
+                openEditMatch(match) {
+                    this.editingMatch = match;
+                    this.editMatchForm = {
+                        scoreA: match.scoreA,
+                        scoreB: match.scoreB,
+                        date: match.date,
+                        notes: match.notes || ''
+                    };
+                },
+
+                closeEditMatch() {
+                    this.editingMatch = null;
+                    this.editMatchForm = {
+                        scoreA: 0,
+                        scoreB: 0,
+                        date: '',
+                        notes: ''
+                    };
+                },
+
+                saveMatchEdit() {
+                    if (!this.editingMatch) return;
+
+                    // Reverse the original rating changes
+                    this.reverseMatchRatings(this.editingMatch);
+
+                    // Update match data
+                    this.editingMatch.scoreA = this.editMatchForm.scoreA;
+                    this.editingMatch.scoreB = this.editMatchForm.scoreB;
+                    this.editingMatch.date = this.editMatchForm.date;
+                    this.editingMatch.notes = this.editMatchForm.notes;
+                    this.editingMatch.winner = this.editMatchForm.scoreA > this.editMatchForm.scoreB ? 'A' :
+                                               this.editMatchForm.scoreB > this.editMatchForm.scoreA ? 'B' : 'Draw';
+                    this.editingMatch.processed = false;
+
+                    // Reprocess the match with new scores
+                    this.processMatch(this.editingMatch);
+
+                    this.saveData();
+                    alert('Match updated successfully!');
+                    this.closeEditMatch();
+                },
+
+                reverseMatchRatings(match) {
+                    // Get team players
+                    const teamAPlayers = match.teamA.map(id => this.players.find(p => p.id === id));
+                    const teamBPlayers = match.teamB.map(id => this.players.find(p => p.id === id));
+
+                    // Reverse stats
+                    teamAPlayers.forEach(player => {
+                        player.gamesPlayed--;
+                        if (match.winner === 'A') player.wins--;
+                        else if (match.winner === 'Draw') player.draws = (player.draws || 1) - 1;
+                        else player.losses--;
+                    });
+
+                    teamBPlayers.forEach(player => {
+                        player.gamesPlayed--;
+                        if (match.winner === 'B') player.wins--;
+                        else if (match.winner === 'Draw') player.draws = (player.draws || 1) - 1;
+                        else player.losses--;
+                    });
+
+                    // Reverse rating changes from history
+                    const matchHistory = this.ratingsHistory.filter(h => h.matchId === match.id);
+                    matchHistory.forEach(historyEntry => {
+                        const player = this.players.find(p => p.id === historyEntry.playerId);
+                        if (player) {
+                            player.rating = historyEntry.oldRating;
+                        }
+                    });
+
+                    // Remove history entries for this match
+                    this.ratingsHistory = this.ratingsHistory.filter(h => h.matchId !== match.id);
+                },
+
+                async deleteMatch(match) {
+                    if (!confirm(`Are you sure you want to delete this match?\n\n${this.getTeamNames(match.teamA)} vs ${this.getTeamNames(match.teamB)}\n${match.scoreA} - ${match.scoreB}\n\nThis will reverse all rating changes from this match.`)) {
+                        return;
+                    }
+
+                    // Reverse the ratings
+                    this.reverseMatchRatings(match);
+
+                    // Remove the match from the array
+                    const index = this.matches.findIndex(m => m.id === match.id);
+                    if (index !== -1) {
+                        this.matches.splice(index, 1);
+                    }
+
+                    // Delete from Supabase
+                    try {
+                        await sb.from('matches').delete().eq('id', match.id);
+                        await sb.from('ratings_history').delete().eq('matchId', match.id);
+                        console.log('Match deleted from Supabase');
+                    } catch (error) {
+                        console.error('Error deleting from Supabase:', error);
+                    }
+
+                    this.saveData();
+                    alert('Match deleted successfully!');
                 },
 
                 // Round Recording Methods
@@ -2858,38 +3530,55 @@
                 },
                 async saveData() {
                     try {
+                        console.log('Starting saveData...');
+                        console.log(`Saving: ${this.players.length} players, ${this.matches.length} matches, ${this.ratingsHistory.length} ratings, ${this.schedules.length} schedules`);
+
                         // Save players
-                        for (const player of this.players) {
-                            await sb.from('players').upsert(player);
+                        if (this.players.length > 0) {
+                            console.log('Saving players...');
+                            const playersResult = await sb.from('players').upsert(this.players);
+                            if (playersResult.error) {
+                                console.error('Players save error:', playersResult.error);
+                                throw new Error('Players: ' + playersResult.error.message);
+                            }
                         }
-                        
+
                         // Save matches
-                        for (const match of this.matches) {
-                            await sb.from('matches').upsert(match);
+                        if (this.matches.length > 0) {
+                            console.log('Saving matches...');
+                            const matchesResult = await sb.from('matches').upsert(this.matches);
+                            if (matchesResult.error) {
+                                console.error('Matches save error:', matchesResult.error);
+                                throw new Error('Matches: ' + matchesResult.error.message);
+                            }
                         }
-                        
+
                         // Save ratings history
-                        for (const rating of this.ratingsHistory) {
-                            await sb.from('ratings_history').upsert(rating);
+                        if (this.ratingsHistory.length > 0) {
+                            console.log('Saving ratings history...');
+                            const ratingsResult = await sb.from('ratings_history').upsert(this.ratingsHistory);
+                            if (ratingsResult.error) {
+                                console.error('Ratings save error:', ratingsResult.error);
+                                throw new Error('Ratings: ' + ratingsResult.error.message);
+                            }
                         }
-                        
+
                         // Save schedules
-                        for (const schedule of this.schedules) {
-                            await sb.from('schedules').upsert(schedule);
+                        if (this.schedules.length > 0) {
+                            console.log('Saving schedules...');
+                            const schedulesResult = await sb.from('schedules').upsert(this.schedules);
+                            if (schedulesResult.error) {
+                                console.error('Schedules save error:', schedulesResult.error);
+                                console.error('First schedule object:', this.schedules[0]);
+                                throw new Error('Schedules: ' + schedulesResult.error.message);
+                            }
                         }
-                        
+
                         console.log('Data saved to Supabase successfully');
                     } catch (error) {
                         console.error('Error saving to Supabase:', error);
-                        // Fallback to localStorage
-                        const data = {
-                            players: this.players,
-                            matches: this.matches,
-                            ratingsHistory: this.ratingsHistory,
-                            schedules: this.schedules,
-                            tournamentLeaderboards: this.tournamentLeaderboards
-                        };
-                        localStorage.setItem('pickleballData', JSON.stringify(data));
+                        alert('Failed to save data to database: ' + error.message);
+                        throw error;
                     }
                 },
                 async loadData() {
@@ -2908,47 +3597,11 @@
                         this.schedules = schedulesResponse.data || [];
                         this.tournamentLeaderboards = [];
 
-                        // If no data in Supabase, try localStorage or initial data
-                        if (this.players.length === 0) {
-                            const saved = localStorage.getItem('pickleballData');
-                            if (saved) {
-                                const data = JSON.parse(saved);
-                                this.players = data.players || [];
-                                this.matches = data.matches || [];
-                                this.ratingsHistory = data.ratingsHistory || [];
-                                this.schedules = data.schedules || [];
-                                this.tournamentLeaderboards = data.tournamentLeaderboards || [];
-                                this.saveData(); // Migrate to Supabase
-                            } else {
-                                // Load initial data
-                                try {
-                                    const response = await fetch('sample-data.json');
-                                    if (response.ok) {
-                                        const data = await response.json();
-                                        this.players = data.players || [];
-                                        this.matches = data.matches || [];
-                                        this.ratingsHistory = data.ratingsHistory || [];
-                                        this.schedules = data.schedules || [];
-                                        this.tournamentLeaderboards = [];
-                                        this.saveData(); // Save to Supabase
-                                    }
-                                } catch (error) {
-                                    console.error('Failed to load initial data:', error);
-                                }
-                            }
-                        }
+                        console.log('Data loaded from Supabase successfully');
+                        console.log(`Loaded: ${this.players.length} players, ${this.matches.length} matches, ${this.schedules.length} schedules`);
                     } catch (error) {
                         console.error('Error loading from Supabase:', error);
-                        // Fallback to localStorage
-                        const saved = localStorage.getItem('pickleballData');
-                        if (saved) {
-                            const data = JSON.parse(saved);
-                            this.players = data.players || [];
-                            this.matches = data.matches || [];
-                            this.ratingsHistory = data.ratingsHistory || [];
-                            this.schedules = data.schedules || [];
-                            this.tournamentLeaderboards = data.tournamentLeaderboards || [];
-                        }
+                        alert('Failed to load data from database. Please check your connection and refresh the page.');
                     }
 
                     // Check admin status
