@@ -767,11 +767,34 @@
             <!-- Match History -->
             <div v-if="activeTab === 'history'" class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-bold mb-4">Match History</h2>
-                <div v-if="matches.length === 0" class="text-gray-500">
-                    No matches recorded yet.
+
+                <!-- Filter Controls -->
+                <div class="mb-4 flex gap-4 items-center">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Player</label>
+                        <select v-model="historyPlayerFilter" class="border rounded-lg px-3 py-2 w-full">
+                            <option value="">All Players</option>
+                            <option v-for="player in sortedPlayers" :key="player.id" :value="player.id">
+                                {{ player.name }}
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Per Page</label>
+                        <select v-model="historyPageSize" class="border rounded-lg px-3 py-2">
+                            <option :value="10">10</option>
+                            <option :value="20">20</option>
+                            <option :value="50">50</option>
+                            <option :value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="filteredMatches.length === 0" class="text-gray-500">
+                    No matches found.
                 </div>
                 <div v-else class="space-y-3">
-                    <div v-for="match in recentMatches" :key="match.id" class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div v-for="match in paginatedMatches" :key="match.id" class="border rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex items-center gap-3 cursor-pointer flex-1" @click="toggleMatchExpand(match.id)">
                                 <span class="text-sm text-gray-600">{{ formatDate(match.date) }}</span>
@@ -830,6 +853,32 @@
                         </div>
                         <div v-if="match.notes" class="mt-2">
                             <span class="text-xs text-gray-600">Note: {{ match.notes }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="mt-6 flex items-center justify-between border-t pt-4">
+                        <div class="text-sm text-gray-600">
+                            Showing {{ historyStartIndex + 1 }}-{{ Math.min(historyEndIndex, filteredMatches.length) }} of {{ filteredMatches.length }} matches
+                        </div>
+                        <div class="flex gap-2">
+                            <button
+                                @click="historyCurrentPage--"
+                                :disabled="historyCurrentPage === 1"
+                                :class="historyCurrentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-700'"
+                                class="bg-purple-600 text-white px-4 py-2 rounded-lg transition-all">
+                                Previous
+                            </button>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-gray-600">Page {{ historyCurrentPage }} of {{ historyTotalPages }}</span>
+                            </div>
+                            <button
+                                @click="historyCurrentPage++"
+                                :disabled="historyCurrentPage === historyTotalPages"
+                                :class="historyCurrentPage === historyTotalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-700'"
+                                class="bg-purple-600 text-white px-4 py-2 rounded-lg transition-all">
+                                Next
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1620,6 +1669,11 @@
                     expandedSessions: {}, // Track which date sessions are expanded
                     expandedRounds: {}, // Track which rounds are expanded
 
+                    // Match history pagination
+                    historyPlayerFilter: '',
+                    historyPageSize: 20,
+                    historyCurrentPage: 1,
+
                     // Edit match
                     editingMatch: null,
                     editMatchForm: {
@@ -1655,6 +1709,32 @@
                 },
                 recentMatches() {
                     return [...this.matches].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
+                },
+                filteredMatches() {
+                    let filtered = [...this.matches];
+
+                    // Filter by player if selected
+                    if (this.historyPlayerFilter) {
+                        filtered = filtered.filter(match =>
+                            match.teamA.includes(this.historyPlayerFilter) ||
+                            match.teamB.includes(this.historyPlayerFilter)
+                        );
+                    }
+
+                    // Sort by date (most recent first)
+                    return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+                },
+                historyTotalPages() {
+                    return Math.max(1, Math.ceil(this.filteredMatches.length / this.historyPageSize));
+                },
+                historyStartIndex() {
+                    return (this.historyCurrentPage - 1) * this.historyPageSize;
+                },
+                historyEndIndex() {
+                    return this.historyCurrentPage * this.historyPageSize;
+                },
+                paginatedMatches() {
+                    return this.filteredMatches.slice(this.historyStartIndex, this.historyEndIndex);
                 },
                 upcomingSchedules() {
                     const today = new Date().toISOString().split('T')[0];
@@ -1894,6 +1974,14 @@
                             }
                             return bWinPct - aWinPct;
                         });
+                }
+            },
+            watch: {
+                historyPlayerFilter() {
+                    this.historyCurrentPage = 1; // Reset to first page when filter changes
+                },
+                historyPageSize() {
+                    this.historyCurrentPage = 1; // Reset to first page when page size changes
                 }
             },
             methods: {
