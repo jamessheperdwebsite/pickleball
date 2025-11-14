@@ -2024,11 +2024,9 @@
 
                     // Filter and sort
                     const filtered = playerStats.filter(p => p.filteredGames > 0); // Only show players who played in this period
-                    return this.sortLeaguePlayers(filtered);
-                },
 
-                sortLeaguePlayers(players) {
-                    return [...players].sort((a, b) => {
+                    // Apply sorting
+                    return [...filtered].sort((a, b) => {
                         let valA, valB;
 
                         switch(this.leagueSortColumn) {
