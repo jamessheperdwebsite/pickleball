@@ -533,14 +533,38 @@
                         <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
                                 <th class="text-left p-4 font-semibold text-gray-700">Rank</th>
-                                <th class="text-left p-4 font-semibold text-gray-700">Player</th>
-                                <th class="text-center p-4 font-semibold text-gray-700">Points</th>
-                                <th class="text-center p-4 font-semibold text-gray-700">Rating</th>
-                                <th class="text-center p-4 font-semibold text-gray-700">Games</th>
-                                <th class="text-center p-4 font-semibold text-gray-700">Wins</th>
-                                <th class="text-center p-4 font-semibold text-gray-700">Draws</th>
-                                <th class="text-center p-4 font-semibold text-gray-700">Losses</th>
-                                <th class="text-center p-4 font-semibold text-gray-700">Win %</th>
+                                <th @click="sortLeagueBy('name')" class="text-left p-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
+                                    Player
+                                    <span v-if="leagueSortColumn === 'name'">{{ leagueSortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                </th>
+                                <th @click="sortLeagueBy('points')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
+                                    Points
+                                    <span v-if="leagueSortColumn === 'points'">{{ leagueSortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                </th>
+                                <th @click="sortLeagueBy('rating')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
+                                    Rating
+                                    <span v-if="leagueSortColumn === 'rating'">{{ leagueSortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                </th>
+                                <th @click="sortLeagueBy('games')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
+                                    Games
+                                    <span v-if="leagueSortColumn === 'games'">{{ leagueSortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                </th>
+                                <th @click="sortLeagueBy('wins')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
+                                    Wins
+                                    <span v-if="leagueSortColumn === 'wins'">{{ leagueSortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                </th>
+                                <th @click="sortLeagueBy('draws')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
+                                    Draws
+                                    <span v-if="leagueSortColumn === 'draws'">{{ leagueSortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                </th>
+                                <th @click="sortLeagueBy('losses')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
+                                    Losses
+                                    <span v-if="leagueSortColumn === 'losses'">{{ leagueSortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                </th>
+                                <th @click="sortLeagueBy('winpct')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
+                                    Win %
+                                    <span v-if="leagueSortColumn === 'winpct'">{{ leagueSortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1711,9 +1735,13 @@
                     viewTournamentId: '', // Input field for tournament ID to view
                     showTournamentTable: false, // Toggle tournament table view
 
-                    // Table sorting
+                    // Table sorting (for tournament tables)
                     sortColumn: 'pointDiff', // Default sort by point differential
                     sortDirection: 'desc',
+
+                    // League table sorting
+                    leagueSortColumn: 'points', // Default sort by points
+                    leagueSortDirection: 'desc',
 
                     // Tournament editing
                     editingTournamentId: null,
@@ -1994,19 +2022,60 @@
                         };
                     });
 
-                    // Sort by filtered wins (or rating for overall)
-                    return playerStats
-                        .filter(p => p.filteredGames > 0) // Only show players who played in this period
-                        .sort((a, b) => {
-                            // Sort by win percentage, then by games played
-                            const aWinPct = a.filteredGames > 0 ? a.filteredWins / a.filteredGames : 0;
-                            const bWinPct = b.filteredGames > 0 ? b.filteredWins / b.filteredGames : 0;
+                    // Filter and sort
+                    const filtered = playerStats.filter(p => p.filteredGames > 0); // Only show players who played in this period
+                    return this.sortLeaguePlayers(filtered);
+                },
 
-                            if (Math.abs(aWinPct - bWinPct) < 0.001) {
-                                return b.filteredGames - a.filteredGames;
-                            }
-                            return bWinPct - aWinPct;
-                        });
+                sortLeaguePlayers(players) {
+                    return [...players].sort((a, b) => {
+                        let valA, valB;
+
+                        switch(this.leagueSortColumn) {
+                            case 'name':
+                                valA = a.name.toLowerCase();
+                                valB = b.name.toLowerCase();
+                                break;
+                            case 'points':
+                                valA = (a.filteredWins * 3) + (a.filteredDraws * 1);
+                                valB = (b.filteredWins * 3) + (b.filteredDraws * 1);
+                                break;
+                            case 'rating':
+                                valA = this.leagueFilter === 'overall' ? a.rating : a.filteredRating;
+                                valB = this.leagueFilter === 'overall' ? b.rating : b.filteredRating;
+                                break;
+                            case 'games':
+                                valA = a.filteredGames;
+                                valB = b.filteredGames;
+                                break;
+                            case 'wins':
+                                valA = a.filteredWins;
+                                valB = b.filteredWins;
+                                break;
+                            case 'draws':
+                                valA = a.filteredDraws;
+                                valB = b.filteredDraws;
+                                break;
+                            case 'losses':
+                                valA = a.filteredLosses;
+                                valB = b.filteredLosses;
+                                break;
+                            case 'winpct':
+                                valA = a.filteredGames > 0 ? a.filteredWins / a.filteredGames : 0;
+                                valB = b.filteredGames > 0 ? b.filteredWins / b.filteredGames : 0;
+                                break;
+                            default:
+                                valA = (a.filteredWins * 3) + (a.filteredDraws * 1);
+                                valB = (b.filteredWins * 3) + (b.filteredDraws * 1);
+                                break;
+                        }
+
+                        if (this.leagueSortDirection === 'asc') {
+                            return valA > valB ? 1 : valA < valB ? -1 : 0;
+                        } else {
+                            return valA < valB ? 1 : valA > valB ? -1 : 0;
+                        }
+                    });
                 }
             },
             watch: {
@@ -2015,6 +2084,16 @@
                 },
                 historyPageSize() {
                     this.historyCurrentPage = 1; // Reset to first page when page size changes
+                },
+                leagueFilter() {
+                    // Reset league table sorting to default when filter changes
+                    this.leagueSortColumn = 'points';
+                    this.leagueSortDirection = 'desc';
+                },
+                viewTournamentId() {
+                    // Reset tournament table sorting to default when viewing new tournament
+                    this.sortColumn = 'pointDiff';
+                    this.sortDirection = 'desc';
                 }
             },
             methods: {
@@ -3634,6 +3713,75 @@
                         // New column, default to descending for numbers, ascending for name
                         this.sortColumn = column;
                         this.sortDirection = column === 'name' ? 'asc' : 'desc';
+                    }
+                },
+
+                sortLeagueBy(column) {
+                    if (this.leagueSortColumn === column) {
+                        // Toggle direction if clicking same column
+                        this.leagueSortDirection = this.leagueSortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        // New column, default to descending for numbers, ascending for name
+                        this.leagueSortColumn = column;
+                        this.leagueSortDirection = column === 'name' ? 'asc' : 'desc';
+                    }
+                },
+
+                // Tournament Editing
+                openTournamentEditor(tournamentId) {
+                    this.editingTournamentId = tournamentId;
+                    this.showEditScheduleModal = true;
+                },
+
+                closeEditModal() {
+                    this.showEditScheduleModal = false;
+                    this.editingTournamentId = null;
+                },
+
+                getTournamentSchedules(tournamentId) {
+                    return this.schedules.filter(s => s.tournamentId === tournamentId);
+                },
+
+                deleteSchedule(scheduleId) {
+                    if (!confirm('Are you sure you want to remove this match from the tournament?')) {
+                        return;
+                    }
+
+                    const index = this.schedules.findIndex(s => s.id === scheduleId);
+                    if (index > -1) {
+                        this.schedules.splice(index, 1);
+                    }
+                },
+
+                async saveTournamentChanges() {
+                    try {
+                        // Validate all schedules
+                        const tournamentSchedules = this.getTournamentSchedules(this.editingTournamentId);
+
+                        for (const schedule of tournamentSchedules) {
+                            // Check for empty players
+                            const allPlayers = [...schedule.teamA, ...schedule.teamB];
+                            if (allPlayers.some(p => !p || p === '')) {
+                                alert('Please fill in all player slots or remove incomplete matches');
+                                return;
+                            }
+
+                            // Check for duplicate players in same match
+                            const uniquePlayers = new Set(allPlayers);
+                            if (uniquePlayers.size !== allPlayers.length) {
+                                alert('A player cannot be on both teams in the same match');
+                                return;
+                            }
+                        }
+
+                        // Save to Supabase
+                        await this.saveData();
+
+                        alert('Tournament changes saved successfully!');
+                        this.closeEditModal();
+                    } catch (error) {
+                        console.error('Error saving tournament changes:', error);
+                        alert('Failed to save changes: ' + error.message);
                     }
                 },
 
