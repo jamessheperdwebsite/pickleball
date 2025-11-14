@@ -2943,10 +2943,17 @@
                         const tournamentId = 'T' + Date.now();
                         console.log('Tournament ID:', tournamentId);
 
+                        // Find the highest existing schedule ID number to avoid conflicts
+                        const existingIds = this.schedules.map(s => {
+                            const match = s.id.match(/^S(\d+)$/);
+                            return match ? parseInt(match[1]) : 0;
+                        });
+                        const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+
                         let scheduleIndex = 0;
                         this.generatedSchedule.forEach(match => {
                             const schedule = {
-                                id: 'S' + String(this.schedules.length + scheduleIndex + 1).padStart(4, '0'),
+                                id: 'S' + String(maxId + scheduleIndex + 1).padStart(4, '0'),
                                 tournamentId: tournamentId,
                                 date: this.scheduleGenerator.date,
                                 court: match.court,
