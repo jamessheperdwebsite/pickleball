@@ -642,7 +642,10 @@
                                     <button @click.stop="viewTournamentId = session.tournamentId; showTournamentTable = true; activeTab = 'league'" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
                                         View Leaderboard
                                     </button>
-                                    <button @click.stop="deleteTournament(session.tournamentId)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                                    <button v-if="isAdmin" @click.stop="openTournamentEditor(session.tournamentId)" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                                        Edit
+                                    </button>
+                                    <button v-if="isAdmin" @click.stop="deleteTournament(session.tournamentId)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
                                         Delete
                                     </button>
                                     <button @click="toggleSessionExpand(session.tournamentId)" class="text-2xl">
