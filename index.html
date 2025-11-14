@@ -445,13 +445,34 @@
                                     <thead class="bg-gradient-to-r from-purple-100 to-pink-100">
                                         <tr>
                                             <th class="text-left p-4 font-semibold text-gray-700">Rank</th>
-                                            <th class="text-left p-4 font-semibold text-gray-700">Player</th>
-                                            <th class="text-center p-4 font-semibold text-gray-700">Games</th>
-                                            <th class="text-center p-4 font-semibold text-gray-700">Wins</th>
-                                            <th class="text-center p-4 font-semibold text-gray-700">Losses</th>
-                                            <th class="text-center p-4 font-semibold text-gray-700">Points For</th>
-                                            <th class="text-center p-4 font-semibold text-gray-700">Points Against</th>
-                                            <th class="text-center p-4 font-semibold text-gray-700">Diff</th>
+                                            <th @click="sortBy('name')" class="text-left p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Player
+                                                <span v-if="sortColumn === 'name'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
+                                            <th @click="sortBy('games')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Games
+                                                <span v-if="sortColumn === 'games'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
+                                            <th @click="sortBy('wins')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Wins
+                                                <span v-if="sortColumn === 'wins'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
+                                            <th @click="sortBy('losses')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Losses
+                                                <span v-if="sortColumn === 'losses'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
+                                            <th @click="sortBy('pointsFor')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Points For
+                                                <span v-if="sortColumn === 'pointsFor'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
+                                            <th @click="sortBy('pointsAgainst')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Points Against
+                                                <span v-if="sortColumn === 'pointsAgainst'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
+                                            <th @click="sortBy('pointDiff')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Diff
+                                                <span v-if="sortColumn === 'pointDiff'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1685,7 +1706,16 @@
 
                     // Tournament table viewing
                     viewTournamentId: '', // Input field for tournament ID to view
-                    showTournamentTable: false // Toggle tournament table view
+                    showTournamentTable: false, // Toggle tournament table view
+
+                    // Table sorting
+                    sortColumn: 'pointDiff', // Default sort by point differential
+                    sortDirection: 'desc',
+
+                    // Tournament editing
+                    editingTournamentId: null,
+                    editingSchedule: null,
+                    showEditScheduleModal: false
                 }
             },
             computed: {
@@ -3535,13 +3565,73 @@
                     const leaderboard = this.getTournamentLeaderboard(tournamentId);
                     if (!leaderboard) return [];
 
+                    let standings = [];
                     // If completed, return the finalized standings
                     if (leaderboard.status === 'completed' && leaderboard.tournamentStandings) {
-                        return leaderboard.tournamentStandings;
+                        standings = [...leaderboard.tournamentStandings];
+                    } else {
+                        // If active, calculate live standings from matches
+                        standings = this.getTournamentStats(tournamentId);
                     }
 
-                    // If active, calculate live standings from matches
-                    return this.getTournamentStats(tournamentId);
+                    // Apply sorting
+                    return this.sortStandings(standings);
+                },
+
+                sortStandings(standings) {
+                    const sorted = [...standings].sort((a, b) => {
+                        let valA, valB;
+
+                        switch(this.sortColumn) {
+                            case 'name':
+                                valA = a.name.toLowerCase();
+                                valB = b.name.toLowerCase();
+                                break;
+                            case 'games':
+                                valA = a.gamesPlayed;
+                                valB = b.gamesPlayed;
+                                break;
+                            case 'wins':
+                                valA = a.wins;
+                                valB = b.wins;
+                                break;
+                            case 'losses':
+                                valA = a.losses;
+                                valB = b.losses;
+                                break;
+                            case 'pointsFor':
+                                valA = a.pointsScored;
+                                valB = b.pointsScored;
+                                break;
+                            case 'pointsAgainst':
+                                valA = a.pointsConceded;
+                                valB = b.pointsConceded;
+                                break;
+                            case 'pointDiff':
+                            default:
+                                valA = (a.pointsScored - a.pointsConceded);
+                                valB = (b.pointsScored - b.pointsConceded);
+                                break;
+                        }
+
+                        if (this.sortDirection === 'asc') {
+                            return valA > valB ? 1 : valA < valB ? -1 : 0;
+                        } else {
+                            return valA < valB ? 1 : valA > valB ? -1 : 0;
+                        }
+                    });
+                    return sorted;
+                },
+
+                sortBy(column) {
+                    if (this.sortColumn === column) {
+                        // Toggle direction if clicking same column
+                        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        // New column, default to descending for numbers, ascending for name
+                        this.sortColumn = column;
+                        this.sortDirection = column === 'name' ? 'asc' : 'desc';
+                    }
                 },
 
                 // Data Management
