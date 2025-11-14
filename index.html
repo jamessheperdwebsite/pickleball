@@ -1609,69 +1609,6 @@
                     </div>
                 </div>
 
-                <!-- Tournament Edit Modal -->
-                <div v-if="showEditScheduleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="closeEditModal">
-                    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                        <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-xl z-10">
-                            <div class="flex justify-between items-center">
-                                <h3 class="text-2xl font-bold">Edit Tournament</h3>
-                                <button @click="closeEditModal" class="text-white hover:text-gray-200 text-3xl">&times;</button>
-                            </div>
-                            <p class="text-sm opacity-90 mt-2">Tournament ID: {{ editingTournamentId }}</p>
-                        </div>
-
-                        <div class="p-6 space-y-4">
-                            <div v-for="schedule in getTournamentSchedules(editingTournamentId)" :key="schedule.id" class="border rounded-lg p-4 bg-gray-50">
-                                <div class="flex justify-between items-start mb-3">
-                                    <div>
-                                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold mr-2">
-                                            Court {{ schedule.court }}
-                                        </span>
-                                        <span class="text-sm text-gray-600">{{ schedule.format }}</span>
-                                    </div>
-                                    <button @click="deleteSchedule(schedule.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs transition-colors">
-                                        Remove
-                                    </button>
-                                </div>
-
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Team A</label>
-                                        <select v-for="(playerId, idx) in schedule.teamA" :key="'A-'+idx"
-                                                v-model="schedule.teamA[idx]"
-                                                class="w-full p-2 border rounded mb-2">
-                                            <option value="">Select Player</option>
-                                            <option v-for="player in players" :key="player.id" :value="player.id">
-                                                {{ player.name }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Team B</label>
-                                        <select v-for="(playerId, idx) in schedule.teamB" :key="'B-'+idx"
-                                                v-model="schedule.teamB[idx]"
-                                                class="w-full p-2 border rounded mb-2">
-                                            <option value="">Select Player</option>
-                                            <option v-for="player in players" :key="player.id" :value="player.id">
-                                                {{ player.name }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="sticky bottom-0 bg-gray-50 p-6 rounded-b-xl border-t flex justify-end gap-3 z-10">
-                            <button @click="closeEditModal" class="px-6 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg font-semibold transition-colors">
-                                Cancel
-                            </button>
-                            <button @click="saveTournamentChanges" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
-                                Save Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Statistics -->
                 <div class="mt-6 grid md:grid-cols-4 gap-4">
                     <div class="bg-gray-50 p-4 rounded-lg text-center">
@@ -1690,6 +1627,69 @@
                         <p class="text-2xl font-bold text-orange-600">{{ unprocessedMatches.length }}</p>
                         <p class="text-sm text-gray-600">Unprocessed</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tournament Edit Modal (At Root Level) -->
+        <div v-if="showEditScheduleModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="closeEditModal">
+            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-xl z-10">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold">Edit Tournament</h3>
+                        <button @click="closeEditModal" class="text-white hover:text-gray-200 text-3xl">&times;</button>
+                    </div>
+                    <p class="text-sm opacity-90 mt-2">Tournament ID: {{ editingTournamentId }}</p>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <div v-for="schedule in getTournamentSchedules(editingTournamentId)" :key="schedule.id" class="border rounded-lg p-4 bg-gray-50">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold mr-2">
+                                    Court {{ schedule.court }}
+                                </span>
+                                <span class="text-sm text-gray-600">{{ schedule.format }}</span>
+                            </div>
+                            <button @click="deleteSchedule(schedule.id)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs transition-colors">
+                                Remove
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Team A</label>
+                                <select v-for="(playerId, idx) in schedule.teamA" :key="'A-'+idx"
+                                        v-model="schedule.teamA[idx]"
+                                        class="w-full p-2 border rounded mb-2">
+                                    <option value="">Select Player</option>
+                                    <option v-for="player in players" :key="player.id" :value="player.id">
+                                        {{ player.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Team B</label>
+                                <select v-for="(playerId, idx) in schedule.teamB" :key="'B-'+idx"
+                                        v-model="schedule.teamB[idx]"
+                                        class="w-full p-2 border rounded mb-2">
+                                    <option value="">Select Player</option>
+                                    <option v-for="player in players" :key="player.id" :value="player.id">
+                                        {{ player.name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-gray-50 p-6 rounded-b-xl border-t flex justify-end gap-3 z-10">
+                    <button @click="closeEditModal" class="px-6 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg font-semibold transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="saveTournamentChanges" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+                        Save Changes
+                    </button>
                 </div>
             </div>
         </div>
@@ -3840,8 +3840,11 @@
 
                 // Tournament Editing
                 openTournamentEditor(tournamentId) {
+                    console.log('openTournamentEditor called with:', tournamentId);
+                    console.log('Schedules for this tournament:', this.schedules.filter(s => s.tournamentId === tournamentId));
                     this.editingTournamentId = tournamentId;
                     this.showEditScheduleModal = true;
+                    console.log('showEditScheduleModal set to:', this.showEditScheduleModal);
                 },
 
                 closeEditModal() {
