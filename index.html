@@ -4016,10 +4016,21 @@
                         // Save schedules
                         if (this.schedules.length > 0) {
                             console.log('Saving schedules...');
-                            const schedulesResult = await sb.from('schedules').upsert(this.schedules);
+                            // Remove duplicates based on id before upserting
+                            const uniqueSchedules = [];
+                            const seenIds = new Set();
+                            this.schedules.forEach(schedule => {
+                                if (!seenIds.has(schedule.id)) {
+                                    seenIds.add(schedule.id);
+                                    uniqueSchedules.push(schedule);
+                                }
+                            });
+                            console.log(`Schedules: ${this.schedules.length} total, ${uniqueSchedules.length} unique`);
+
+                            const schedulesResult = await sb.from('schedules').upsert(uniqueSchedules);
                             if (schedulesResult.error) {
                                 console.error('Schedules save error:', schedulesResult.error);
-                                console.error('First schedule object:', this.schedules[0]);
+                                console.error('First schedule object:', uniqueSchedules[0]);
                                 throw new Error('Schedules: ' + schedulesResult.error.message);
                             }
                         }
