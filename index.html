@@ -11,7 +11,7 @@
     <style>
         [v-cloak] { display: none; }
         
-        /* David Lloyd Purple Color Scheme */
+        
         :root {
             --dl-purple: #4B1F60;
             --dl-light-purple: #7B3FAA;
@@ -121,7 +121,7 @@
         <div class="text-white shadow-2xl" style="background-color: #4c1f5f;">
             <div class="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
                 <div class="flex items-center justify-center flex-1">
-                    <img src="PICK.png" alt="David Lloyd Coventry Pickleball Social" class="h-24 md:h-32">
+                    <img src="PICK.png" alt="Coventry Pickleball Social" class="h-24 md:h-32">
                 </div>
                 <div class="flex gap-3">
                     <button v-if="!isAdmin" @click="showAdminLogin = true" class="bg-white bg-opacity-20 px-6 py-2 rounded-xl hover:bg-opacity-30 transition-all duration-300 font-medium backdrop-blur-sm">
@@ -161,7 +161,7 @@
                         Cancel
                     </button>
                 </div>
-                <p class="text-sm text-gray-500 mt-4 text-center">Default password: <code class="bg-gray-100 px-2 py-1 rounded">admin123</code></p>
+                
             </div>
         </div>
 
@@ -621,9 +621,9 @@
                                 <td class="text-center p-4">
                                     <div class="flex items-center justify-center">
                                         <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                            <div class="h-2 rounded-full transition-all duration-500" style="background: linear-gradient(135deg, var(--accent-gold) 0%, var(--dl-purple) 100%);" :style="{width: (player.filteredGames > 0 ? (player.filteredWins / player.filteredGames * 100) : 0) + '%'}"></div>
+                                            <div class="h-2 rounded-full transition-all duration-500" style="background: linear-gradient(135deg, var(--accent-gold) 0%, var(--dl-purple) 100%);" :style="{width: (player.filteredGames > 0 ? ((player.filteredWins + player.filteredDraws * 0.5) / player.filteredGames * 100) : 0) + '%'}"></div>
                                         </div>
-                                        <span class="font-medium text-gray-700">{{ player.filteredGames > 0 ? Math.round(player.filteredWins / player.filteredGames * 100) : 0 }}%</span>
+                                        <span class="font-medium text-gray-700">{{ player.filteredGames > 0 ? Math.round((player.filteredWins + player.filteredDraws * 0.5) / player.filteredGames * 100) : 0 }}%</span>
                                     </div>
                                 </td>
                             </tr>
@@ -2031,8 +2031,8 @@
                                     valB = b.filteredLosses;
                                     break;
                                 case 'winpct':
-                                    valA = a.filteredGames > 0 ? a.filteredWins / a.filteredGames : 0;
-                                    valB = b.filteredGames > 0 ? b.filteredWins / b.filteredGames : 0;
+                                    valA = a.filteredGames > 0 ? (a.filteredWins + a.filteredDraws * 0.5) / a.filteredGames : 0;
+                                    valB = b.filteredGames > 0 ? (b.filteredWins + b.filteredDraws * 0.5) / b.filteredGames : 0;
                                     break;
                                 default:
                                     valA = (a.filteredWins * 3) + (a.filteredDraws * 1);
@@ -2172,8 +2172,8 @@
                                 valB = b.filteredLosses;
                                 break;
                             case 'winpct':
-                                valA = a.filteredGames > 0 ? a.filteredWins / a.filteredGames : 0;
-                                valB = b.filteredGames > 0 ? b.filteredWins / b.filteredGames : 0;
+                                valA = a.filteredGames > 0 ? (a.filteredWins + a.filteredDraws * 0.5) / a.filteredGames : 0;
+                                valB = b.filteredGames > 0 ? (b.filteredWins + b.filteredDraws * 0.5) / b.filteredGames : 0;
                                 break;
                             default:
                                 valA = (a.filteredWins * 3) + (a.filteredDraws * 1);
@@ -4088,10 +4088,10 @@
                     a.click();
                 },
                 exportCSV() {
-                    let csv = 'ID,Name,Rating,Games Played,Wins,Losses,Win %\n';
+                    let csv = 'ID,Name,Rating,Games Played,Wins,Losses,Draws,Win %\n';
                     this.sortedPlayers.forEach(player => {
-                        const winPct = player.gamesPlayed > 0 ? Math.round(player.wins / player.gamesPlayed * 100) : 0;
-                        csv += `${player.id},${player.name},${Math.round(player.rating)},${player.gamesPlayed},${player.wins},${player.losses},${winPct}\n`;
+                        const winPct = player.gamesPlayed > 0 ? Math.round((player.wins + player.draws * 0.5) / player.gamesPlayed * 100) : 0;
+                        csv += `${player.id},${player.name},${Math.round(player.rating)},${player.gamesPlayed},${player.wins},${player.losses},${player.draws || 0},${winPct}\n`;
                     });
                     
                     const blob = new Blob([csv], { type: 'text/csv' });
