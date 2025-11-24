@@ -2417,8 +2417,17 @@
 
                 // Match Methods
                 generateMatchId() {
-                    const num = this.matches.length + 1;
-                    return 'M' + String(num).padStart(3, '0');
+                    // Find the highest existing match number to avoid duplicates
+                    let maxNum = 0;
+                    this.matches.forEach(match => {
+                        if (match.id && match.id.startsWith('M')) {
+                            const num = parseInt(match.id.substring(1));
+                            if (!isNaN(num) && num > maxNum) {
+                                maxNum = num;
+                            }
+                        }
+                    });
+                    return 'M' + String(maxNum + 1).padStart(3, '0');
                 },
                 saveMatch() {
                     // Validation
