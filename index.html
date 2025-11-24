@@ -2429,6 +2429,19 @@
                     });
                     return 'M' + String(maxNum + 1).padStart(3, '0');
                 },
+                generateRatingId() {
+                    // Find the highest existing rating number to avoid duplicates
+                    let maxNum = 0;
+                    this.ratingsHistory.forEach(rating => {
+                        if (rating.id && rating.id.startsWith('R')) {
+                            const num = parseInt(rating.id.substring(1));
+                            if (!isNaN(num) && num > maxNum) {
+                                maxNum = num;
+                            }
+                        }
+                    });
+                    return 'R' + String(maxNum + 1).padStart(3, '0');
+                },
                 saveMatch() {
                     // Validation
                     if (this.newMatch.teamA.length === 0 || this.newMatch.teamB.length === 0) {
@@ -2529,7 +2542,7 @@
 
                         // Add to history
                         this.ratingsHistory.push({
-                            id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
+                            id: this.generateRatingId(),
                             playerId: player.id,
                             matchId: match.id,
                             oldRating: oldRating,
@@ -2549,7 +2562,7 @@
 
                         // Add to history
                         this.ratingsHistory.push({
-                            id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
+                            id: this.generateRatingId(),
                             playerId: player.id,
                             matchId: match.id,
                             oldRating: oldRating,
@@ -2586,7 +2599,7 @@
 
                             // Add to history
                             this.ratingsHistory.push({
-                                id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
+                                id: this.generateRatingId(),
                                 playerId: player.id,
                                 matchId: match.id,
                                 oldRating: oldRating,
@@ -2606,7 +2619,7 @@
 
                             // Add to history
                             this.ratingsHistory.push({
-                                id: 'R' + String(this.ratingsHistory.length + 1).padStart(3, '0'),
+                                id: this.generateRatingId(),
                                 playerId: player.id,
                                 matchId: match.id,
                                 oldRating: oldRating,
@@ -4018,7 +4031,18 @@
                         // Save ratings history
                         if (this.ratingsHistory.length > 0) {
                             console.log('Saving ratings history...');
-                            const ratingsResult = await sb.from('ratings_history').upsert(this.ratingsHistory);
+                            // Remove duplicates based on id before upserting
+                            const uniqueRatings = [];
+                            const seenIds = new Set();
+                            this.ratingsHistory.forEach(rating => {
+                                if (!seenIds.has(rating.id)) {
+                                    seenIds.add(rating.id);
+                                    uniqueRatings.push(rating);
+                                }
+                            });
+                            console.log(`Ratings: ${this.ratingsHistory.length} total, ${uniqueRatings.length} unique`);
+
+                            const ratingsResult = await sb.from('ratings_history').upsert(uniqueRatings);
                             if (ratingsResult.error) {
                                 console.error('Ratings save error:', ratingsResult.error);
                                 throw new Error('Ratings: ' + ratingsResult.error.message);
