@@ -1054,20 +1054,20 @@
                                     class="w-full p-2 border rounded mb-2"
                                 >
                                     <option value="">Select Player</option>
-                                    <option v-for="player in players" :key="player.id" :value="player.id">
+                                    <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                         {{ player.name }} ({{ Math.round(player.rating) }})
                                     </option>
                                 </select>
                                 <div v-else class="space-y-2">
                                     <select v-model="manualMatch.teamA[0]" class="w-full p-2 border rounded">
                                         <option value="">Select Player 1</option>
-                                        <option v-for="player in players" :key="player.id" :value="player.id">
+                                        <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                             {{ player.name }} ({{ Math.round(player.rating) }})
                                         </option>
                                     </select>
                                     <select v-model="manualMatch.teamA[1]" class="w-full p-2 border rounded">
                                         <option value="">Select Player 2</option>
-                                        <option v-for="player in players" :key="player.id" :value="player.id">
+                                        <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                             {{ player.name }} ({{ Math.round(player.rating) }})
                                         </option>
                                     </select>
@@ -1081,20 +1081,20 @@
                                     class="w-full p-2 border rounded mb-2"
                                 >
                                     <option value="">Select Player</option>
-                                    <option v-for="player in players" :key="player.id" :value="player.id">
+                                    <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                         {{ player.name }} ({{ Math.round(player.rating) }})
                                     </option>
                                 </select>
                                 <div v-else class="space-y-2">
                                     <select v-model="manualMatch.teamB[0]" class="w-full p-2 border rounded">
                                         <option value="">Select Player 1</option>
-                                        <option v-for="player in players" :key="player.id" :value="player.id">
+                                        <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                             {{ player.name }} ({{ Math.round(player.rating) }})
                                         </option>
                                     </select>
                                     <select v-model="manualMatch.teamB[1]" class="w-full p-2 border rounded">
                                         <option value="">Select Player 2</option>
-                                        <option v-for="player in players" :key="player.id" :value="player.id">
+                                        <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                             {{ player.name }} ({{ Math.round(player.rating) }})
                                         </option>
                                     </select>
@@ -1209,20 +1209,20 @@
                                             class="w-full p-2 border rounded text-sm"
                                         >
                                             <option value="">Select Player</option>
-                                            <option v-for="player in players" :key="player.id" :value="player.id">
+                                            <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                                 {{ player.name }}
                                             </option>
                                         </select>
                                         <div v-else class="space-y-1">
                                             <select v-model="match.teamA[0]" class="w-full p-1 border rounded text-xs">
                                                 <option value="">Player 1</option>
-                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                                     {{ player.name }}
                                                 </option>
                                             </select>
                                             <select v-model="match.teamA[1]" class="w-full p-1 border rounded text-xs">
                                                 <option value="">Player 2</option>
-                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                                     {{ player.name }}
                                                 </option>
                                             </select>
@@ -1238,20 +1238,20 @@
                                             class="w-full p-2 border rounded text-sm"
                                         >
                                             <option value="">Select Player</option>
-                                            <option v-for="player in players" :key="player.id" :value="player.id">
+                                            <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                                 {{ player.name }}
                                             </option>
                                         </select>
                                         <div v-else class="space-y-1">
                                             <select v-model="match.teamB[0]" class="w-full p-1 border rounded text-xs">
                                                 <option value="">Player 1</option>
-                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                                     {{ player.name }}
                                                 </option>
                                             </select>
                                             <select v-model="match.teamB[1]" class="w-full p-1 border rounded text-xs">
                                                 <option value="">Player 2</option>
-                                                <option v-for="player in players" :key="player.id" :value="player.id">
+                                                <option v-for="player in alphabeticalPlayers" :key="player.id" :value="player.id">
                                                     {{ player.name }}
                                                 </option>
                                             </select>
@@ -1316,10 +1316,10 @@
                     <div>
                         <label class="block text-sm font-medium mb-2">Available Players</label>
                         <div class="border rounded p-3 max-h-48 overflow-y-auto">
-                            <label v-for="player in players" :key="player.id" class="flex items-center p-1 hover:bg-gray-50">
-                                <input 
-                                    type="checkbox" 
-                                    :value="player.id" 
+                            <label v-for="player in alphabeticalPlayers" :key="player.id" class="flex items-center p-1 hover:bg-gray-50">
+                                <input
+                                    type="checkbox"
+                                    :value="player.id"
                                     v-model="scheduleGenerator.availablePlayers"
                                     class="mr-2"
                                 >
@@ -1833,6 +1833,9 @@
                         ...player,
                         gamesPlayed: player.wins + (player.draws || 0) + player.losses
                     })).sort((a, b) => b.rating - a.rating);
+                },
+                alphabeticalPlayers() {
+                    return [...this.players].sort((a, b) => a.name.localeCompare(b.name));
                 },
                 recentMatches() {
                     return [...this.matches].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
