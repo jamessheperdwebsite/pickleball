@@ -1513,7 +1513,7 @@
                     </p>
                     <div class="flex gap-4">
                         <button @click="migrateTournamentData" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 font-semibold">
-                            📦 Migrate Tournament Data ({{tournamentLeaderboards.length}} items)
+                            📦 Migrate Tournament Data ({{tournamentsToMigrateCount}} tournaments)
                         </button>
                         <div v-if="migrationStatus" class="flex items-center px-3 py-1 rounded text-sm font-medium" 
                              :class="migrationStatus.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
@@ -1863,6 +1863,14 @@
                 },
                 recentMatches() {
                     return [...this.matches].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
+                },
+                tournamentsToMigrateCount() {
+                    const tournamentIds = [...new Set(
+                        this.schedules
+                            .filter(s => s.tournamentId && s.tournamentId.trim())
+                            .map(s => s.tournamentId)
+                    )];
+                    return tournamentIds.length;
                 },
                 filteredMatches() {
                     let filtered = [...this.matches];
@@ -4168,7 +4176,14 @@
                     }
                 },
                 async migrateTournamentData() {
-                    if (this.tournamentLeaderboards.length === 0) {
+                    // Find all unique tournament IDs from schedules
+                    const tournamentIds = [...new Set(
+                        this.schedules
+                            .filter(s => s.tournamentId && s.tournamentId.trim())
+                            .map(s => s.tournamentId)
+                    )];
+
+                    if (tournamentIds.length === 0) {
                         this.migrationStatus = {
                             success: false,
                             message: 'No tournament data found to migrate'
@@ -4178,10 +4193,42 @@
                     }
 
                     try {
-                        console.log(`Migrating ${this.tournamentLeaderboards.length} tournament records...`);
+                        console.log(`Found ${tournamentIds.length} tournaments to migrate...`);
+                        
+                        const leaderboardsToMigrate = [];
+                        
+                        // Generate leaderboard for each tournament
+                        for (const tournamentId of tournamentIds) {
+                            // Get tournament info from first schedule with this ID
+                            const tournamentSchedule = this.schedules.find(s => s.tournamentId === tournamentId);
+                            const tournamentDate = tournamentSchedule ? tournamentSchedule.date : '';
+                            
+                            // Check if already completed
+                            const existingLeaderboard = this.tournamentLeaderboards.find(t => t.tournamentId === tournamentId);
+                            if (existingLeaderboard) {
+                                leaderboardsToMigrate.push(existingLeaderboard);
+                                continue;
+                            }
+                            
+                            // Calculate tournament standings
+                            const standings = this.getTournamentStats(tournamentId);
+                            
+                            // Create leaderboard record
+                            const leaderboardRecord = {
+                                tournamentId: tournamentId,
+                                date: tournamentDate,
+                                tournamentStandings: standings,
+                                status: 'completed', // Assume past tournaments are completed
+                                endTime: new Date().toISOString()
+                            };
+                            
+                            leaderboardsToMigrate.push(leaderboardRecord);
+                        }
+                        
+                        console.log(`Migrating ${leaderboardsToMigrate.length} tournament records...`);
                         
                         // Save tournament leaderboards to Supabase
-                        const leaderboardsResult = await sb.from('tournament_leaderboards').upsert(this.tournamentLeaderboards);
+                        const leaderboardsResult = await sb.from('tournament_leaderboards').upsert(leaderboardsToMigrate);
                         
                         if (leaderboardsResult.error) {
                             console.error('Tournament migration error:', leaderboardsResult.error);
@@ -4191,9 +4238,11 @@
                             };
                         } else {
                             console.log('Tournament data migrated successfully');
+                            // Update local array
+                            this.tournamentLeaderboards = [...this.tournamentLeaderboards, ...leaderboardsToMigrate];
                             this.migrationStatus = {
                                 success: true,
-                                message: `Successfully migrated ${this.tournamentLeaderboards.length} tournament records`
+                                message: `Successfully migrated ${leaderboardsToMigrate.length} tournament records`
                             };
                         }
                     } catch (error) {
