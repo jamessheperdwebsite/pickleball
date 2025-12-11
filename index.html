@@ -4220,7 +4220,9 @@
                                 tournamentStandings: standings,
                                 status: 'completed', // Assume past tournaments are completed
                                 startTime: tournamentDate, // Use tournament date as start time
-                                endTime: new Date().toISOString()
+                                endTime: new Date().toISOString(),
+                                playerStatsBefore: [], // Empty array for past tournaments
+                                playerStatsAfter: [] // Empty array for past tournaments
                             };
                             
                             leaderboardsToMigrate.push(leaderboardRecord);
