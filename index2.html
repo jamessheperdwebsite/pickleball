@@ -4703,7 +4703,7 @@
                 },
 
                 toggleSessionDetails(sessionId) {
-                    this.$set(this.sessionDetailsExpanded, sessionId, !this.sessionDetailsExpanded[sessionId]);
+                    this.sessionDetailsExpanded[sessionId] = !this.sessionDetailsExpanded[sessionId];
                 },
 
                 async cancelGameSession(sessionId) {
