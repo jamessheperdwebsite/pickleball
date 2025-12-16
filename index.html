@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1652,6 +1651,209 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Signup Sheet -->
+            <div v-if="activeTab === 'signup'" class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold mb-4">Signup Sheet</h2>
+                
+                <!-- Admin: Add New Game Session -->
+                <div v-if="isAdmin" class="mb-6 p-4 bg-blue-50 rounded-lg">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-blue-800">Manage Game Sessions</h3>
+                        <button 
+                            @click="showAddSession = true"
+                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            + Add New Session
+                        </button>
+                    </div>
+                    
+                    <!-- Add Session Modal -->
+                    <div v-if="showAddSession" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                            <h4 class="text-lg font-bold mb-4">Add New Game Session</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Date</label>
+                                    <input v-model="newGameSession.date" type="date" 
+                                           class="w-full px-3 py-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Time</label>
+                                    <input v-model="newGameSession.time" type="time" 
+                                           class="w-full px-3 py-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Courts Available</label>
+                                    <input v-model.number="newGameSession.courts" type="number" min="1" max="10"
+                                           class="w-full px-3 py-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Max Players</label>
+                                    <input v-model.number="newGameSession.maxPlayers" type="number" min="2" max="50"
+                                           class="w-full px-3 py-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Notes</label>
+                                    <input v-model="newGameSession.notes" type="text" 
+                                           placeholder="e.g., Weekday evening session"
+                                           class="w-full px-3 py-2 border rounded-lg">
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-6">
+                                <button @click="addGameSession" 
+                                        class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                                    Add Session
+                                </button>
+                                <button @click="showAddSession = false" 
+                                        class="flex-1 bg-gray-300 text-gray-700 py-2 rounded hover:bg-gray-400">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Game Sessions List -->
+                <div v-if="gameSessions.length === 0" class="text-center py-8 text-gray-500">
+                    <p>No game sessions available yet.</p>
+                    <p v-if="!isAdmin" class="text-sm">Contact admin to add game dates.</p>
+                </div>
+                
+                <div v-else class="space-y-4">
+                    <div v-for="session in sortedGameSessions" :key="session.id" 
+                         class="border rounded-lg p-4 hover:bg-gray-50">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-4 mb-2">
+                                    <h4 class="font-bold text-lg">{{ formatDateDisplay(session.date) }}</h4>
+                                    <span class="text-gray-600">{{ session.time }}</span>
+                                </div>
+                                <div class="text-sm text-gray-600 mb-2">
+                                    {{ session.courts }} court(s) • Max {{ session.maxPlayers }} players
+                                    <span v-if="session.notes"> • {{ session.notes }}</span>
+                                </div>
+                                
+                                <!-- Signup Summary -->
+                                <div class="flex items-center gap-4 text-sm">
+                                    <span class="text-green-600">
+                                        Available: {{ getAvailablePlayersCount(session.id) }}
+                                    </span>
+                                    <span class="text-red-600">
+                                        Not Available: {{ getUnavailablePlayersCount(session.id) }}
+                                    </span>
+                                    <span class="text-gray-600">
+                                        No Response: {{ getNoResponsePlayersCount(session.id) }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Player Action Area -->
+                            <div v-if="!isAdmin && session.status === 'active'" class="ml-4">
+                                <div class="text-sm font-medium mb-2">Your Status:</div>
+                                <div class="flex gap-2">
+                                    <button @click="setPlayerAvailability(session.id, true)"
+                                            :class="getPlayerAvailability(session.id) === true ? 
+                                                   'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'"
+                                            class="px-3 py-1 rounded text-sm hover:opacity-80">
+                                        Available
+                                    </button>
+                                    <button @click="setPlayerAvailability(session.id, false)"
+                                            :class="getPlayerAvailability(session.id) === false ? 
+                                                   'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'"
+                                            class="px-3 py-1 rounded text-sm hover:opacity-80">
+                                        Not Available
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Admin Controls -->
+                            <div v-if="isAdmin" class="ml-4 flex gap-2">
+                                <button @click="toggleSessionDetails(session.id)"
+                                        class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200">
+                                    View Details
+                                </button>
+                                <button @click="cancelGameSession(session.id)"
+                                        v-if="session.status === 'active'"
+                                        class="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Detailed Player List (Admin View) -->
+                        <div v-if="isAdmin && sessionDetailsExpanded[session.id]" 
+                             class="mt-4 pt-4 border-t bg-gray-50 -mx-4 px-4 -mb-4 pb-4">
+                            <h5 class="font-medium mb-3">Player Responses:</h5>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                <!-- Available Players -->
+                                <div>
+                                    <h6 class="text-sm font-medium text-green-700 mb-2">
+                                        Available ({{ getSessionAvailablePlayers(session.id).length }})
+                                    </h6>
+                                    <ul class="text-sm space-y-1">
+                                        <li v-for="player in getSessionAvailablePlayers(session.id)" 
+                                            :key="player.id" class="text-green-600">
+                                            {{ player.name }}
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <!-- Not Available Players -->
+                                <div>
+                                    <h6 class="text-sm font-medium text-red-700 mb-2">
+                                        Not Available ({{ getSessionUnavailablePlayers(session.id).length }})
+                                    </h6>
+                                    <ul class="text-sm space-y-1">
+                                        <li v-for="player in getSessionUnavailablePlayers(session.id)" 
+                                            :key="player.id" class="text-red-600">
+                                            {{ player.name }}
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <!-- No Response Players -->
+                                <div>
+                                    <h6 class="text-sm font-medium text-gray-700 mb-2">
+                                        No Response ({{ getSessionNoResponsePlayers(session.id).length }})
+                                    </h6>
+                                    <ul class="text-sm space-y-1">
+                                        <li v-for="player in getSessionNoResponsePlayers(session.id)" 
+                                            :key="player.id" class="text-gray-600">
+                                            {{ player.name }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <!-- Create Tournament Button -->
+                            <div class="mt-4 pt-4 border-t">
+                                <button @click="createTournamentFromSession(session.id)"
+                                        :disabled="getSessionAvailablePlayers(session.id).length < 4"
+                                        class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                                    Create Tournament ({{ getSessionAvailablePlayers(session.id).length }} available)
+                                </button>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Minimum 4 players required to create a tournament
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Player Selector for Non-Logged Users -->
+                <div v-if="!isAdmin && players.length > 0" class="mt-6 p-4 bg-yellow-50 rounded-lg">
+                    <h3 class="font-bold text-yellow-800 mb-3">Select Your Name</h3>
+                    <select v-model="selectedPlayerId" class="w-full px-3 py-2 border rounded-lg">
+                        <option value="">Choose your name...</option>
+                        <option v-for="player in players" :key="player.id" :value="player.id">
+                            {{ player.name }}
+                        </option>
+                    </select>
+                    <p class="text-sm text-yellow-700 mt-2">
+                        Select your name from the dropdown to mark your availability for game sessions.
+                    </p>
+                </div>
+            </div>
         </div>
 
         <!-- Tournament Edit Modal (At Root Level) -->
@@ -1750,6 +1952,10 @@
                     tournamentLeaderboards: [], // Stores snapshots of tournament standings
                     migrationStatus: null, // Status of tournament data migration
 
+                    // Signup Sheet Data
+                    gameSessions: [], // Admin-created game sessions
+                    playerAvailability: [], // Player signup data
+
                     // Forms
                     showAddPlayer: false,
                     newPlayer: {
@@ -1776,6 +1982,19 @@
                         notes: '',
                         sitOut: null,
                         keepSamePairings: false
+                    },
+                    
+                    // Signup Sheet Forms
+                    showAddSession: false,
+                    selectedPlayerId: '', // For non-admin player selection
+                    sessionDetailsExpanded: {}, // Track which session details are expanded
+                    newGameSession: {
+                        date: new Date().toISOString().split('T')[0],
+                        time: '18:00',
+                        courts: 2,
+                        maxPlayers: 8,
+                        notes: '',
+                        status: 'active'
                     },
                     generatedSchedule: [],
                     showManualMatch: false,
@@ -1841,7 +2060,8 @@
                     const publicTabs = [
                         { id: 'league', name: 'League Table' },
                         { id: 'schedule', name: 'Schedule' },
-                        { id: 'history', name: 'Match History' }
+                        { id: 'history', name: 'Match History' },
+                        { id: 'signup', name: 'Signup Sheet' }
                     ];
                     
                     const adminTabs = [
@@ -2225,6 +2445,17 @@
                             return valA < valB ? 1 : valA > valB ? -1 : 0;
                         }
                     });
+                },
+
+                // Signup Sheet Computed Properties
+                sortedGameSessions() {
+                    return this.gameSessions
+                        .filter(session => session.status === 'active')
+                        .slice().sort((a, b) => {
+                            const dateComparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+                            if (dateComparison !== 0) return dateComparison;
+                            return a.time.localeCompare(b.time);
+                        });
                 }
             },
             watch: {
@@ -4149,12 +4380,14 @@
                 async loadData() {
                     try {
                         // Load from Supabase
-                        const [playersResponse, matchesResponse, ratingsResponse, schedulesResponse, leaderboardsResponse] = await Promise.all([
+                        const [playersResponse, matchesResponse, ratingsResponse, schedulesResponse, leaderboardsResponse, gameSessionsResponse, playerAvailabilityResponse] = await Promise.all([
                             sb.from('players').select('*'),
                             sb.from('matches').select('*'),
                             sb.from('ratings_history').select('*'),
                             sb.from('schedules').select('*'),
-                            sb.from('tournament_leaderboards').select('*')
+                            sb.from('tournament_leaderboards').select('*'),
+                            sb.from('game_sessions').select('*'),
+                            sb.from('player_availability').select('*')
                         ]);
 
                         this.players = playersResponse.data || [];
@@ -4162,9 +4395,11 @@
                         this.ratingsHistory = ratingsResponse.data || [];
                         this.schedules = schedulesResponse.data || [];
                         this.tournamentLeaderboards = leaderboardsResponse.data || [];
+                        this.gameSessions = gameSessionsResponse.data || [];
+                        this.playerAvailability = playerAvailabilityResponse.data || [];
 
                         console.log('Data loaded from Supabase successfully');
-                        console.log(`Loaded: ${this.players.length} players, ${this.matches.length} matches, ${this.schedules.length} schedules, ${this.tournamentLeaderboards.length} tournaments`);
+                        console.log(`Loaded: ${this.players.length} players, ${this.matches.length} matches, ${this.schedules.length} schedules, ${this.tournamentLeaderboards.length} tournaments, ${this.gameSessions.length} game sessions, ${this.playerAvailability.length} availability records`);
                     } catch (error) {
                         console.error('Error loading from Supabase:', error);
                         alert('Failed to load data from database. Please check your connection and refresh the page.');
@@ -4330,6 +4565,209 @@
                     window.print();
                 },
 
+                // Signup Sheet Methods
+                async addGameSession() {
+                    try {
+                        const sessionId = 'GS' + String(this.gameSessions.length + 1).padStart(3, '0');
+                        const sessionData = {
+                            id: sessionId,
+                            date: this.newGameSession.date,
+                            time: this.newGameSession.time,
+                            courts: this.newGameSession.courts,
+                            maxPlayers: this.newGameSession.maxPlayers,
+                            notes: this.newGameSession.notes,
+                            status: this.newGameSession.status,
+                            createdBy: 'admin',
+                            createdAt: new Date().toISOString()
+                        };
+
+                        const { data, error } = await sb.from('game_sessions').upsert(sessionData);
+                        if (error) throw error;
+
+                        this.gameSessions.push(sessionData);
+                        this.showAddSession = false;
+                        
+                        // Reset form
+                        this.newGameSession = {
+                            date: new Date().toISOString().split('T')[0],
+                            time: '18:00',
+                            courts: 2,
+                            maxPlayers: 8,
+                            notes: '',
+                            status: 'active'
+                        };
+
+                        alert('Game session added successfully!');
+                    } catch (error) {
+                        console.error('Error adding game session:', error);
+                        alert('Error adding game session: ' + error.message);
+                    }
+                },
+
+                async setPlayerAvailability(sessionId, available) {
+                    if (!this.selectedPlayerId) {
+                        alert('Please select your name first!');
+                        return;
+                    }
+
+                    try {
+                        // Check if availability already exists
+                        const existingIndex = this.playerAvailability.findIndex(
+                            pa => pa.gameSessionId === sessionId && pa.playerId === this.selectedPlayerId
+                        );
+
+                        const availabilityId = existingIndex >= 0 ? 
+                            this.playerAvailability[existingIndex].id : 
+                            'PA' + String(this.playerAvailability.length + 1).padStart(3, '0');
+
+                        const availabilityData = {
+                            id: availabilityId,
+                            gameSessionId: sessionId,
+                            playerId: this.selectedPlayerId,
+                            available: available,
+                            notes: '',
+                            signupAt: new Date().toISOString()
+                        };
+
+                        const { data, error } = await sb.from('player_availability').upsert(availabilityData);
+                        if (error) throw error;
+
+                        if (existingIndex >= 0) {
+                            this.playerAvailability[existingIndex] = availabilityData;
+                        } else {
+                            this.playerAvailability.push(availabilityData);
+                        }
+
+                        const statusText = available ? 'available' : 'not available';
+                        alert(`Marked as ${statusText} for this session!`);
+                    } catch (error) {
+                        console.error('Error setting availability:', error);
+                        alert('Error setting availability: ' + error.message);
+                    }
+                },
+
+                getPlayerAvailability(sessionId) {
+                    if (!this.selectedPlayerId) return null;
+                    const availability = this.playerAvailability.find(
+                        pa => pa.gameSessionId === sessionId && pa.playerId === this.selectedPlayerId
+                    );
+                    return availability ? availability.available : null;
+                },
+
+                getAvailablePlayersCount(sessionId) {
+                    return this.playerAvailability.filter(
+                        pa => pa.gameSessionId === sessionId && pa.available === true
+                    ).length;
+                },
+
+                getUnavailablePlayersCount(sessionId) {
+                    return this.playerAvailability.filter(
+                        pa => pa.gameSessionId === sessionId && pa.available === false
+                    ).length;
+                },
+
+                getNoResponsePlayersCount(sessionId) {
+                    const respondedPlayerIds = this.playerAvailability
+                        .filter(pa => pa.gameSessionId === sessionId)
+                        .map(pa => pa.playerId);
+                    return this.players.length - respondedPlayerIds.length;
+                },
+
+                getSessionAvailablePlayers(sessionId) {
+                    const availablePlayerIds = this.playerAvailability
+                        .filter(pa => pa.gameSessionId === sessionId && pa.available === true)
+                        .map(pa => pa.playerId);
+                    return this.players.filter(p => availablePlayerIds.includes(p.id));
+                },
+
+                getSessionUnavailablePlayers(sessionId) {
+                    const unavailablePlayerIds = this.playerAvailability
+                        .filter(pa => pa.gameSessionId === sessionId && pa.available === false)
+                        .map(pa => pa.playerId);
+                    return this.players.filter(p => unavailablePlayerIds.includes(p.id));
+                },
+
+                getSessionNoResponsePlayers(sessionId) {
+                    const respondedPlayerIds = this.playerAvailability
+                        .filter(pa => pa.gameSessionId === sessionId)
+                        .map(pa => pa.playerId);
+                    return this.players.filter(p => !respondedPlayerIds.includes(p.id));
+                },
+
+                toggleSessionDetails(sessionId) {
+                    this.sessionDetailsExpanded[sessionId] = !this.sessionDetailsExpanded[sessionId];
+                },
+
+                async cancelGameSession(sessionId) {
+                    if (!confirm('Are you sure you want to delete this game session? This action cannot be undone.')) return;
+                    
+                    try {
+                        // Delete from database
+                        const { error } = await sb.from('game_sessions')
+                            .delete()
+                            .eq('id', sessionId);
+                        
+                        if (error) throw error;
+                        
+                        // Remove from local array
+                        const sessionIndex = this.gameSessions.findIndex(s => s.id === sessionId);
+                        if (sessionIndex >= 0) {
+                            this.gameSessions.splice(sessionIndex, 1);
+                        }
+                        
+                        // Remove any related availability records
+                        this.playerAvailability = this.playerAvailability.filter(
+                            pa => pa.gameSessionId !== sessionId
+                        );
+                        
+                        alert('Game session deleted successfully!');
+                    } catch (error) {
+                        console.error('Error deleting session:', error);
+                        alert('Error deleting session: ' + error.message);
+                    }
+                },
+
+
+                async createTournamentFromSession(sessionId) {
+                    const session = this.gameSessions.find(s => s.id === sessionId);
+                    const availablePlayers = this.getSessionAvailablePlayers(sessionId);
+                    
+                    if (availablePlayers.length < 4) {
+                        alert('Minimum 4 players required to create a tournament');
+                        return;
+                    }
+
+                    if (!confirm(`Create tournament for ${session.date} with ${availablePlayers.length} available players?`)) {
+                        return;
+                    }
+
+                    try {
+                        // Use existing schedule generator logic
+                        this.scheduleGenerator.date = session.date;
+                        this.scheduleGenerator.courts = session.courts;
+                        this.scheduleGenerator.availablePlayers = availablePlayers.map(p => p.id);
+                        this.scheduleGenerator.notes = session.notes || `Tournament from ${session.date}`;
+                        
+                        await this.generateSchedule();
+                        
+                        // Switch to scheduler tab to show generated schedule
+                        this.activeTab = 'scheduler';
+                        alert('Tournament created! Check the scheduler tab to review and save the schedule.');
+                    } catch (error) {
+                        console.error('Error creating tournament:', error);
+                        alert('Error creating tournament: ' + error.message);
+                    }
+                },
+
+                formatDateDisplay(date) {
+                    return new Date(date).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                },
+
                 // Utility Methods
                 formatDate(date) {
                     return new Date(date).toLocaleDateString('en-US', { 
@@ -4383,3 +4821,4 @@
     </style>
 </body>
 </html>
+
