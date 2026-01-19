@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3498,6 +3499,7 @@
                                 teamA: match.teamA,
                                 teamB: match.teamB,
                                 rounds: this.scheduleGenerator.rounds || 1,
+                                roundNumber: match.roundNumber || 1,
                                 notes: this.scheduleGenerator.notes
                             };
                             this.schedules.push(schedule);
@@ -3570,8 +3572,15 @@
                     // Generate unique tournament ID based on timestamp
                     const tournamentId = 'T' + Date.now();
 
+                    // Find the highest existing schedule ID number to avoid conflicts
+                    const existingIds = this.schedules.map(s => {
+                        const match = s.id.match(/^S(\d+)$/);
+                        return match ? parseInt(match[1]) : 0;
+                    });
+                    const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+
                     const schedule = {
-                        id: 'S' + String(this.schedules.length + 1).padStart(4, '0'),
+                        id: 'S' + String(maxId + 1).padStart(4, '0'),
                         tournamentId: tournamentId,
                         date: this.manualMatch.date,
                         court: this.manualMatch.court,
@@ -3579,6 +3588,7 @@
                         teamA: teamA,
                         teamB: teamB,
                         rounds: this.manualMatch.rounds || 1,
+                        roundNumber: 1,
                         notes: this.manualMatch.notes
                     };
 
@@ -3654,6 +3664,13 @@
                     // Generate tournament ID
                     const tournamentId = 'T' + Date.now();
 
+                    // Find the highest existing schedule ID number to avoid conflicts
+                    const existingIds = this.schedules.map(s => {
+                        const match = s.id.match(/^S(\d+)$/);
+                        return match ? parseInt(match[1]) : 0;
+                    });
+                    let maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+
                     // Process each round
                     let scheduleCount = 0;
                     this.customTournament.rounds.forEach((round, roundIndex) => {
@@ -3674,7 +3691,7 @@
 
                             // Create schedule entry
                             const schedule = {
-                                id: 'S' + String(this.schedules.length + scheduleCount + 1).padStart(4, '0'),
+                                id: 'S' + String(maxId + scheduleCount + 1).padStart(4, '0'),
                                 tournamentId: tournamentId,
                                 date: this.customTournament.date,
                                 court: court,
@@ -3682,6 +3699,7 @@
                                 teamA: teamA,
                                 teamB: teamB,
                                 rounds: match.rounds || 3,
+                                roundNumber: roundIndex + 1,
                                 notes: this.customTournament.name
                             };
 
@@ -4170,11 +4188,26 @@
                     return this.schedules.filter(s => s.tournamentId === tournamentId);
                 },
 
-                deleteSchedule(scheduleId) {
+                async deleteSchedule(scheduleId) {
                     if (!confirm('Are you sure you want to remove this match from the tournament?')) {
                         return;
                     }
 
+                    // Delete from database first
+                    try {
+                        const { error } = await sb.from('schedules').delete().eq('id', scheduleId);
+                        if (error) {
+                            console.error('Error deleting schedule from database:', error);
+                            alert('Error deleting schedule from database');
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('Error deleting schedule:', error);
+                        alert('Error deleting schedule');
+                        return;
+                    }
+
+                    // Then remove from local array
                     const index = this.schedules.findIndex(s => s.id === scheduleId);
                     if (index > -1) {
                         this.schedules.splice(index, 1);
