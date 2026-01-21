@@ -666,6 +666,9 @@
                                     <button @click.stop="viewTournamentId = session.tournamentId; showTournamentTable = true; activeTab = 'league'" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
                                         View Leaderboard
                                     </button>
+                                    <button @click.stop="downloadTournamentCSV(session.tournamentId)" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                                        Download CSV
+                                    </button>
                                     <button v-if="isAdmin" @click.stop="openTournamentEditor(session.tournamentId)" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
                                         Edit
                                     </button>
@@ -995,12 +998,27 @@
             <div v-if="activeTab === 'scheduler' && isAdmin" class="bg-white rounded-lg shadow p-6">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold">Generate Schedule</h2>
-                    <button @click="showManualMatch = true" class="btn-coral text-white px-6 py-3 rounded-xl font-semibold shadow-lg">
-                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Create Match
-                    </button>
+                    <div class="flex gap-2">
+                        <button @click="showManualMatch = true" class="btn-coral text-white px-6 py-3 rounded-xl font-semibold shadow-lg">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Create Match
+                        </button>
+                        <button @click="$refs.csvUpload.click()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            Upload CSV
+                        </button>
+                        <a href="tournament_template.csv" download class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg transition-all inline-flex items-center">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Template
+                        </a>
+                        <input type="file" ref="csvUpload" accept=".csv" @change="uploadTournamentCSV" style="display: none">
+                    </div>
                 </div>
 
                 <!-- Manual Match Creation Form -->
@@ -4244,6 +4262,255 @@
                         console.error('Error saving tournament changes:', error);
                         alert('Failed to save changes: ' + error.message);
                     }
+                },
+
+                // CSV Export/Import Methods
+                downloadTournamentCSV(tournamentId) {
+                    const tournamentSchedules = this.schedules.filter(s => s.tournamentId === tournamentId);
+
+                    if (tournamentSchedules.length === 0) {
+                        alert('No schedules found for this tournament');
+                        return;
+                    }
+
+                    // Sort by round number and court
+                    tournamentSchedules.sort((a, b) => {
+                        if (a.roundNumber !== b.roundNumber) return a.roundNumber - b.roundNumber;
+                        return a.court - b.court;
+                    });
+
+                    // Create CSV header
+                    const csvRows = ['Round,Court,Format,Team A Player 1,Team A Player 2,Team B Player 1,Team B Player 2,Games,Notes'];
+
+                    // Add data rows
+                    tournamentSchedules.forEach(schedule => {
+                        const teamANames = schedule.teamA.map(id => {
+                            const player = this.players.find(p => p.id === id);
+                            return player ? player.name : id;
+                        });
+                        const teamBNames = schedule.teamB.map(id => {
+                            const player = this.players.find(p => p.id === id);
+                            return player ? player.name : id;
+                        });
+
+                        // Escape fields that might contain commas
+                        const escapeField = (field) => {
+                            if (field && (field.includes(',') || field.includes('"'))) {
+                                return '"' + field.replace(/"/g, '""') + '"';
+                            }
+                            return field || '';
+                        };
+
+                        const row = [
+                            schedule.roundNumber || 1,
+                            schedule.court || 1,
+                            schedule.format || 'doubles',
+                            escapeField(teamANames[0] || ''),
+                            escapeField(teamANames[1] || ''),
+                            escapeField(teamBNames[0] || ''),
+                            escapeField(teamBNames[1] || ''),
+                            schedule.rounds || 3,
+                            escapeField(schedule.notes || '')
+                        ];
+                        csvRows.push(row.join(','));
+                    });
+
+                    // Create and download file
+                    const csvContent = csvRows.join('\n');
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+
+                    // Get tournament date for filename
+                    const tournamentDate = tournamentSchedules[0]?.date || new Date().toISOString().split('T')[0];
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `tournament_${tournamentId}_${tournamentDate}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                },
+
+                async uploadTournamentCSV(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const csvText = e.target.result;
+                            const lines = csvText.split('\n').filter(line => line.trim());
+
+                            if (lines.length < 2) {
+                                alert('CSV file is empty or has no data rows');
+                                return;
+                            }
+
+                            // Parse header
+                            const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+                            const expectedHeaders = ['round', 'court', 'format', 'team a player 1', 'team a player 2', 'team b player 1', 'team b player 2', 'games', 'notes'];
+
+                            // Validate header
+                            if (header.length < 7) {
+                                alert('Invalid CSV format. Please use the template.');
+                                return;
+                            }
+
+                            // Ask for tournament date
+                            const tournamentDate = prompt('Enter tournament date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+                            if (!tournamentDate || !/^\d{4}-\d{2}-\d{2}$/.test(tournamentDate)) {
+                                alert('Invalid date format. Please use YYYY-MM-DD');
+                                return;
+                            }
+
+                            // Generate tournament ID
+                            const tournamentId = 'T' + Date.now();
+
+                            // Find max schedule ID
+                            const existingIds = this.schedules.map(s => {
+                                const match = s.id.match(/^S(\d+)$/);
+                                return match ? parseInt(match[1]) : 0;
+                            });
+                            let scheduleIdCounter = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+
+                            const newSchedules = [];
+                            const unknownPlayers = [];
+
+                            // Parse CSV helper function for quoted fields
+                            const parseCSVLine = (line) => {
+                                const result = [];
+                                let current = '';
+                                let inQuotes = false;
+
+                                for (let i = 0; i < line.length; i++) {
+                                    const char = line[i];
+                                    if (char === '"') {
+                                        if (inQuotes && line[i + 1] === '"') {
+                                            current += '"';
+                                            i++;
+                                        } else {
+                                            inQuotes = !inQuotes;
+                                        }
+                                    } else if (char === ',' && !inQuotes) {
+                                        result.push(current.trim());
+                                        current = '';
+                                    } else {
+                                        current += char;
+                                    }
+                                }
+                                result.push(current.trim());
+                                return result;
+                            };
+
+                            // Parse data rows
+                            for (let i = 1; i < lines.length; i++) {
+                                const values = parseCSVLine(lines[i]);
+                                if (values.length < 7 || !values[0]) continue;
+
+                                const roundNumber = parseInt(values[0]) || 1;
+                                const court = parseInt(values[1]) || 1;
+                                const format = (values[2] || 'doubles').toLowerCase();
+                                const teamAPlayer1 = values[3]?.trim();
+                                const teamAPlayer2 = values[4]?.trim();
+                                const teamBPlayer1 = values[5]?.trim();
+                                const teamBPlayer2 = values[6]?.trim();
+                                const games = parseInt(values[7]) || 3;
+                                const notes = values[8]?.trim() || '';
+
+                                // Find player IDs by name (case-insensitive)
+                                const findPlayerId = (name) => {
+                                    if (!name) return null;
+                                    const player = this.players.find(p =>
+                                        p.name.toLowerCase() === name.toLowerCase()
+                                    );
+                                    if (!player && name) {
+                                        if (!unknownPlayers.includes(name)) {
+                                            unknownPlayers.push(name);
+                                        }
+                                        return null;
+                                    }
+                                    return player ? player.id : null;
+                                };
+
+                                // Build teams based on format
+                                let teamA = [];
+                                let teamB = [];
+
+                                if (format === 'singles') {
+                                    const a1 = findPlayerId(teamAPlayer1);
+                                    const b1 = findPlayerId(teamBPlayer1);
+                                    if (a1) teamA = [a1];
+                                    if (b1) teamB = [b1];
+                                } else if (format === 'doubles') {
+                                    const a1 = findPlayerId(teamAPlayer1);
+                                    const a2 = findPlayerId(teamAPlayer2);
+                                    const b1 = findPlayerId(teamBPlayer1);
+                                    const b2 = findPlayerId(teamBPlayer2);
+                                    if (a1) teamA.push(a1);
+                                    if (a2) teamA.push(a2);
+                                    if (b1) teamB.push(b1);
+                                    if (b2) teamB.push(b2);
+                                } else if (format === '2v1') {
+                                    const a1 = findPlayerId(teamAPlayer1);
+                                    const a2 = findPlayerId(teamAPlayer2);
+                                    const b1 = findPlayerId(teamBPlayer1);
+                                    if (a1) teamA.push(a1);
+                                    if (a2) teamA.push(a2);
+                                    if (b1) teamB.push(b1);
+                                }
+
+                                // Only add if we have valid teams
+                                if (teamA.length > 0 && teamB.length > 0) {
+                                    newSchedules.push({
+                                        id: 'S' + String(scheduleIdCounter++).padStart(4, '0'),
+                                        tournamentId: tournamentId,
+                                        date: tournamentDate,
+                                        court: court,
+                                        format: format,
+                                        teamA: teamA,
+                                        teamB: teamB,
+                                        rounds: games,
+                                        roundNumber: roundNumber,
+                                        notes: notes
+                                    });
+                                }
+                            }
+
+                            if (unknownPlayers.length > 0) {
+                                const proceed = confirm(
+                                    `The following players were not found and their matches will be skipped:\n\n${unknownPlayers.join('\n')}\n\nDo you want to continue with the other matches?`
+                                );
+                                if (!proceed) {
+                                    event.target.value = '';
+                                    return;
+                                }
+                            }
+
+                            if (newSchedules.length === 0) {
+                                alert('No valid matches found in the CSV file. Please check player names match exactly.');
+                                event.target.value = '';
+                                return;
+                            }
+
+                            // Add schedules
+                            this.schedules.push(...newSchedules);
+
+                            // Create tournament snapshot
+                            this.createTournamentSnapshot(tournamentId, tournamentDate, '');
+
+                            // Save to database
+                            await this.saveData();
+
+                            alert(`Successfully imported ${newSchedules.length} matches for tournament ${tournamentId}!`);
+                            event.target.value = '';
+                        } catch (error) {
+                            console.error('Error parsing CSV:', error);
+                            alert('Error parsing CSV file: ' + error.message);
+                            event.target.value = '';
+                        }
+                    };
+
+                    reader.readAsText(file);
                 },
 
                 // Data Management
