@@ -10,8 +10,26 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         [v-cloak] { display: none; }
-        
-        
+
+        .site-blur {
+            filter: blur(8px);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
         :root {
             --dl-purple: #4B1F60;
             --dl-light-purple: #7B3FAA;
@@ -117,6 +135,34 @@
 </head>
 <body>
     <div id="app" v-cloak class="min-h-screen" style="background-color: var(--soft-light-gray);">
+        <!-- Site Password Modal -->
+        <div v-if="!siteAuthenticated" class="password-overlay">
+            <div class="glass-effect p-8 rounded-2xl shadow-2xl max-w-md w-full m-4 border border-white border-opacity-20">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-teal-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome to Pickleball Club</h2>
+                    <p class="text-gray-600">Enter the password to access the site</p>
+                </div>
+                <input
+                    v-model="sitePassword"
+                    type="password"
+                    placeholder="Enter site password"
+                    @keyup.enter="attemptSiteLogin"
+                    class="w-full p-4 border border-gray-200 rounded-xl mb-6 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+                    autofocus
+                >
+                <button @click="attemptSiteLogin" class="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white px-6 py-3 rounded-xl font-medium hover:shadow-lg transition-all duration-300">
+                    Enter Site
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content (blurred when not authenticated) -->
+        <div :class="{ 'site-blur': !siteAuthenticated }">
         <!-- Header -->
         <div class="text-white shadow-2xl" style="background-color: #4c1f5f;">
             <div class="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
@@ -1510,6 +1556,9 @@
                             <button @click="recalculateAllRatings" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
                                 🔄 Recalculate All Ratings from 200
                             </button>
+                            <button @click="fixNegativeRatings" class="w-full bg-teal-600 text-white py-2 rounded hover:bg-teal-700">
+                                🔧 Fix Negative Ratings (Set to 0)
+                            </button>
                             <button @click="clearAllData" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">
                                 ⚠️ Clear All Data
                             </button>
@@ -1937,6 +1986,7 @@
                 </div>
             </div>
         </div>
+        </div><!-- End blur wrapper -->
     </div>
 
     <script>
@@ -1952,6 +2002,11 @@
         createApp({
             data() {
                 return {
+                    // Site Access
+                    siteAuthenticated: false,
+                    sitePassword: '',
+                    sitePasswordHash: 'pickle2026',
+
                     // Auth
                     isAdmin: false,
                     showAdminLogin: false,
@@ -2496,6 +2551,18 @@
                 }
             },
             methods: {
+                // Site Access Methods
+                attemptSiteLogin() {
+                    if (this.sitePassword === this.sitePasswordHash) {
+                        this.siteAuthenticated = true;
+                        this.sitePassword = '';
+                        sessionStorage.setItem('siteAuthenticated', 'true');
+                    } else {
+                        alert('Incorrect password');
+                        this.sitePassword = '';
+                    }
+                },
+
                 // Auth Methods
                 attemptLogin() {
                     if (this.adminPassword === this.adminPasswordHash) {
@@ -2842,7 +2909,7 @@
                     // Update player ratings and stats
                     teamAPlayers.forEach(player => {
                         const oldRating = player.rating;
-                        player.rating += changes.changeA;
+                        player.rating = Math.max(0, player.rating + changes.changeA);
                         player.gamesPlayed++;
                         if (match.winner === 'A') player.wins++;
                         else if (match.winner === 'Draw') player.draws = (player.draws || 0) + 1;
@@ -2862,7 +2929,7 @@
 
                     teamBPlayers.forEach(player => {
                         const oldRating = player.rating;
-                        player.rating += changes.changeB;
+                        player.rating = Math.max(0, player.rating + changes.changeB);
                         player.gamesPlayed++;
                         if (match.winner === 'B') player.wins++;
                         else if (match.winner === 'Draw') player.draws = (player.draws || 0) + 1;
@@ -2884,22 +2951,22 @@
                 },
                 processAllMatches() {
                     const unprocessed = this.matches.filter(m => !m.processed);
-                    
+
                     unprocessed.forEach(match => {
                         // Get team ratings
                         const teamAPlayers = match.teamA.map(id => this.players.find(p => p.id === id));
                         const teamBPlayers = match.teamB.map(id => this.players.find(p => p.id === id));
-                        
+
                         const teamARating = teamAPlayers.reduce((sum, p) => sum + p.rating, 0) / teamAPlayers.length;
                         const teamBRating = teamBPlayers.reduce((sum, p) => sum + p.rating, 0) / teamBPlayers.length;
-                        
+
                         // Calculate rating changes
                         const changes = this.calculateElo(teamARating, teamBRating, match.scoreA, match.scoreB);
-                        
+
                         // Update player ratings and stats
                         teamAPlayers.forEach(player => {
                             const oldRating = player.rating;
-                            player.rating += changes.changeA;
+                            player.rating = Math.max(0, player.rating + changes.changeA);
                             player.gamesPlayed++;
                             if (match.winner === 'A') player.wins++;
                             else if (match.winner === 'Draw') player.draws = (player.draws || 0) + 1;
@@ -2919,7 +2986,7 @@
 
                         teamBPlayers.forEach(player => {
                             const oldRating = player.rating;
-                            player.rating += changes.changeB;
+                            player.rating = Math.max(0, player.rating + changes.changeB);
                             player.gamesPlayed++;
                             if (match.winner === 'B') player.wins++;
                             else if (match.winner === 'Draw') player.draws = (player.draws || 0) + 1;
@@ -2936,10 +3003,10 @@
                                 date: match.date
                             });
                         });
-                        
+
                         match.processed = true;
                     });
-                    
+
                     this.saveData();
                     alert(`Processed ${unprocessed.length} matches and updated ratings!`);
                 },
@@ -4665,6 +4732,27 @@
                     this.saveData();
                     alert(`Successfully recalculated all ratings from 200! Processed ${processedMatches.length} matches.`);
                 },
+                async fixNegativeRatings() {
+                    // Find players with negative ratings
+                    const negativeRatings = this.players.filter(p => p.rating < 0);
+
+                    if (negativeRatings.length === 0) {
+                        alert('No negative ratings found! All ratings are already 0 or above.');
+                        return;
+                    }
+
+                    if (!confirm(`Found ${negativeRatings.length} player(s) with negative ratings:\n\n${negativeRatings.map(p => `${p.name}: ${Math.round(p.rating)}`).join('\n')}\n\nSet all to 0?`)) {
+                        return;
+                    }
+
+                    // Fix the ratings
+                    negativeRatings.forEach(player => {
+                        player.rating = 0;
+                    });
+
+                    await this.saveData();
+                    alert(`Fixed ${negativeRatings.length} negative rating(s). All ratings are now 0 or above.`);
+                },
                 async saveData() {
                     try {
                         console.log('Starting saveData...');
@@ -4763,7 +4851,10 @@
                             sb.from('player_availability').select('*')
                         ]);
 
-                        this.players = playersResponse.data || [];
+                        this.players = (playersResponse.data || []).map(p => ({
+                            ...p,
+                            rating: Math.max(0, p.rating || 0)
+                        }));
                         this.matches = matchesResponse.data || [];
                         this.ratingsHistory = ratingsResponse.data || [];
                         this.schedules = schedulesResponse.data || [];
@@ -4907,7 +4998,10 @@
                         try {
                             const data = JSON.parse(e.target.result);
                             if (confirm('This will replace all current data. Are you sure?')) {
-                                this.players = data.players || [];
+                                this.players = (data.players || []).map(p => ({
+                                    ...p,
+                                    rating: Math.max(0, p.rating || 0)
+                                }));
                                 this.matches = data.matches || [];
                                 this.ratingsHistory = data.ratingsHistory || [];
                                 this.schedules = data.schedules || [];
@@ -5174,6 +5268,10 @@
                 }
             },
             mounted() {
+                // Check for site authentication
+                if (sessionStorage.getItem('siteAuthenticated') === 'true') {
+                    this.siteAuthenticated = true;
+                }
                 this.loadData();
             }
         }).mount('#app');
