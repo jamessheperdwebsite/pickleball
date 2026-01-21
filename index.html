@@ -4279,8 +4279,8 @@
                         return a.court - b.court;
                     });
 
-                    // Create CSV header
-                    const csvRows = ['Round,Court,Format,Team A Player 1,Team A Player 2,Team B Player 1,Team B Player 2,Games,Notes'];
+                    // Create CSV header with score columns
+                    const csvRows = ['Round,Court,Format,Team A Player 1,Team A Player 2,Team B Player 1,Team B Player 2,Games,Score A,Score B,Notes'];
 
                     // Add data rows
                     tournamentSchedules.forEach(schedule => {
@@ -4292,6 +4292,17 @@
                             const player = this.players.find(p => p.id === id);
                             return player ? player.name : id;
                         });
+
+                        // Find matching match to get scores if they exist
+                        const matchingMatch = this.matches.find(m =>
+                            m.date === schedule.date &&
+                            m.tournamentId === schedule.tournamentId &&
+                            JSON.stringify([...m.teamA].sort()) === JSON.stringify([...schedule.teamA].sort()) &&
+                            JSON.stringify([...m.teamB].sort()) === JSON.stringify([...schedule.teamB].sort())
+                        );
+
+                        const scoreA = matchingMatch ? matchingMatch.scoreA : '';
+                        const scoreB = matchingMatch ? matchingMatch.scoreB : '';
 
                         // Escape fields that might contain commas
                         const escapeField = (field) => {
@@ -4310,6 +4321,8 @@
                             escapeField(teamBNames[0] || ''),
                             escapeField(teamBNames[1] || ''),
                             schedule.rounds || 3,
+                            scoreA,
+                            scoreB,
                             escapeField(schedule.notes || '')
                         ];
                         csvRows.push(row.join(','));
@@ -4348,7 +4361,6 @@
 
                             // Parse header
                             const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-                            const expectedHeaders = ['round', 'court', 'format', 'team a player 1', 'team a player 2', 'team b player 1', 'team b player 2', 'games', 'notes'];
 
                             // Validate header
                             if (header.length < 7) {
@@ -4367,13 +4379,21 @@
                             const tournamentId = 'T' + Date.now();
 
                             // Find max schedule ID
-                            const existingIds = this.schedules.map(s => {
+                            const existingScheduleIds = this.schedules.map(s => {
                                 const match = s.id.match(/^S(\d+)$/);
                                 return match ? parseInt(match[1]) : 0;
                             });
-                            let scheduleIdCounter = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+                            let scheduleIdCounter = existingScheduleIds.length > 0 ? Math.max(...existingScheduleIds) + 1 : 1;
+
+                            // Find max match ID
+                            const existingMatchIds = this.matches.map(m => {
+                                const match = m.id.match(/^M(\d+)$/);
+                                return match ? parseInt(match[1]) : 0;
+                            });
+                            let matchIdCounter = existingMatchIds.length > 0 ? Math.max(...existingMatchIds) + 1 : 1;
 
                             const newSchedules = [];
+                            const newMatches = [];
                             const unknownPlayers = [];
 
                             // Parse CSV helper function for quoted fields
@@ -4415,7 +4435,9 @@
                                 const teamBPlayer1 = values[5]?.trim();
                                 const teamBPlayer2 = values[6]?.trim();
                                 const games = parseInt(values[7]) || 3;
-                                const notes = values[8]?.trim() || '';
+                                const scoreA = values[8]?.trim() ? parseInt(values[8]) : null;
+                                const scoreB = values[9]?.trim() ? parseInt(values[9]) : null;
+                                const notes = values[10]?.trim() || '';
 
                                 // Find player IDs by name (case-insensitive)
                                 const findPlayerId = (name) => {
@@ -4461,8 +4483,10 @@
 
                                 // Only add if we have valid teams
                                 if (teamA.length > 0 && teamB.length > 0) {
+                                    const scheduleId = 'S' + String(scheduleIdCounter++).padStart(4, '0');
+
                                     newSchedules.push({
-                                        id: 'S' + String(scheduleIdCounter++).padStart(4, '0'),
+                                        id: scheduleId,
                                         tournamentId: tournamentId,
                                         date: tournamentDate,
                                         court: court,
@@ -4473,6 +4497,23 @@
                                         roundNumber: roundNumber,
                                         notes: notes
                                     });
+
+                                    // If scores are provided, create a match record
+                                    if (scoreA !== null && scoreB !== null && !isNaN(scoreA) && !isNaN(scoreB)) {
+                                        newMatches.push({
+                                            id: 'M' + String(matchIdCounter++).padStart(4, '0'),
+                                            tournamentId: tournamentId,
+                                            date: tournamentDate,
+                                            format: format,
+                                            teamA: teamA,
+                                            teamB: teamB,
+                                            scoreA: scoreA,
+                                            scoreB: scoreB,
+                                            notes: notes,
+                                            processed: false,
+                                            scheduleId: scheduleId
+                                        });
+                                    }
                                 }
                             }
 
@@ -4495,13 +4536,25 @@
                             // Add schedules
                             this.schedules.push(...newSchedules);
 
+                            // Add matches and process them for ratings
+                            if (newMatches.length > 0) {
+                                for (const match of newMatches) {
+                                    this.matches.push(match);
+                                    this.processMatch(match);
+                                }
+                            }
+
                             // Create tournament snapshot
                             this.createTournamentSnapshot(tournamentId, tournamentDate, '');
 
                             // Save to database
                             await this.saveData();
 
-                            alert(`Successfully imported ${newSchedules.length} matches for tournament ${tournamentId}!`);
+                            let message = `Successfully imported ${newSchedules.length} matches for tournament ${tournamentId}!`;
+                            if (newMatches.length > 0) {
+                                message += `\n\n${newMatches.length} matches with scores were also recorded to match history and ratings updated.`;
+                            }
+                            alert(message);
                             event.target.value = '';
                         } catch (error) {
                             console.error('Error parsing CSV:', error);
