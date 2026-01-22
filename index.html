@@ -4817,12 +4817,14 @@
                             });
                             console.log(`Schedules: ${this.schedules.length} total, ${uniqueSchedules.length} unique`);
 
-                            const schedulesResult = await sb.from('schedules').upsert(uniqueSchedules);
+                            const schedulesResult = await sb.from('schedules').upsert(uniqueSchedules).select();
+                            console.log('Schedules upsert result:', schedulesResult);
                             if (schedulesResult.error) {
                                 console.error('Schedules save error:', schedulesResult.error);
                                 console.error('First schedule object:', uniqueSchedules[0]);
                                 throw new Error('Schedules: ' + schedulesResult.error.message);
                             }
+                            console.log(`Schedules saved: ${schedulesResult.data?.length || 0} rows returned`);
                         }
 
                         // Save tournament leaderboards
