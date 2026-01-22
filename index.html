@@ -4597,8 +4597,7 @@
                                             scoreA: scoreA,
                                             scoreB: scoreB,
                                             notes: notes,
-                                            processed: false,
-                                            scheduleId: scheduleId
+                                            processed: false
                                         });
                                     }
                                 }
@@ -4771,7 +4770,12 @@
                         // Save matches
                         if (this.matches.length > 0) {
                             console.log('Saving matches...');
-                            const matchesResult = await sb.from('matches').upsert(this.matches);
+                            // Remove scheduleId field as it's not in the database schema
+                            const matchesToSave = this.matches.map(m => {
+                                const { scheduleId, ...matchWithoutScheduleId } = m;
+                                return matchWithoutScheduleId;
+                            });
+                            const matchesResult = await sb.from('matches').upsert(matchesToSave);
                             if (matchesResult.error) {
                                 console.error('Matches save error:', matchesResult.error);
                                 throw new Error('Matches: ' + matchesResult.error.message);
