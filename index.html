@@ -4846,15 +4846,15 @@
                 },
                 async loadData() {
                     try {
-                        // Load from Supabase
+                        // Load from Supabase (use range to bypass 1000 row default limit)
                         const [playersResponse, matchesResponse, ratingsResponse, schedulesResponse, leaderboardsResponse, gameSessionsResponse, playerAvailabilityResponse] = await Promise.all([
-                            sb.from('players').select('*'),
-                            sb.from('matches').select('*'),
-                            sb.from('ratings_history').select('*'),
-                            sb.from('schedules').select('*'),
-                            sb.from('tournament_leaderboards').select('*'),
-                            sb.from('game_sessions').select('*'),
-                            sb.from('player_availability').select('*')
+                            sb.from('players').select('*').range(0, 9999),
+                            sb.from('matches').select('*').range(0, 9999),
+                            sb.from('ratings_history').select('*').range(0, 9999),
+                            sb.from('schedules').select('*').range(0, 9999),
+                            sb.from('tournament_leaderboards').select('*').range(0, 9999),
+                            sb.from('game_sessions').select('*').range(0, 9999),
+                            sb.from('player_availability').select('*').range(0, 9999)
                         ]);
 
                         this.players = (playersResponse.data || []).map(p => ({
