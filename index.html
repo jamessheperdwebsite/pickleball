@@ -2606,6 +2606,7 @@
                         gamesPlayed: 0,
                         wins: 0,
                         losses: 0,
+                        draws: 0,
                         createdAt: new Date().toISOString().split('T')[0]
                     };
                     
@@ -2741,19 +2742,23 @@
                         this.ratingsHistory = this.ratingsHistory.filter(r => r.tournamentId !== tournamentId);
                     }
 
-                    // Recalculate wins/losses
+                    // Recalculate wins/losses/draws
                     this.players.forEach(player => {
                         const playerMatches = this.matches.filter(m =>
                             m.teamA.includes(player.id) || m.teamB.includes(player.id)
                         );
                         player.wins = 0;
                         player.losses = 0;
+                        player.draws = 0;
                         playerMatches.forEach(match => {
                             const isTeamA = match.teamA.includes(player.id);
-                            const won = (isTeamA && match.scoreA > match.scoreB) ||
-                                       (!isTeamA && match.scoreB > match.scoreA);
-                            if (won) player.wins++;
-                            else player.losses++;
+                            if (match.winner === 'Draw') {
+                                player.draws++;
+                            } else if ((isTeamA && match.winner === 'A') || (!isTeamA && match.winner === 'B')) {
+                                player.wins++;
+                            } else {
+                                player.losses++;
+                            }
                         });
                     });
 
@@ -4679,6 +4684,7 @@
                         player.gamesPlayed = 0;
                         player.wins = 0;
                         player.losses = 0;
+                        player.draws = 0;
                     });
 
                     // Remove today's matches
@@ -4712,6 +4718,7 @@
                         player.gamesPlayed = 0;
                         player.wins = 0;
                         player.losses = 0;
+                        player.draws = 0;
                     });
 
                     // Get all processed matches in chronological order
@@ -4875,7 +4882,8 @@
 
                         this.players = (players || []).map(p => ({
                             ...p,
-                            rating: Math.max(0, p.rating || 0)
+                            rating: Math.max(0, p.rating || 0),
+                            draws: p.draws || 0
                         }));
                         this.matches = matches || [];
                         this.ratingsHistory = ratingsHistory || [];
