@@ -495,6 +495,10 @@
                                                 Player
                                                 <span v-if="sortColumn === 'name'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                                             </th>
+                                            <th @click="sortBy('points')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Points
+                                                <span v-if="sortColumn === 'points'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
                                             <th @click="sortBy('games')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
                                                 Games
                                                 <span v-if="sortColumn === 'games'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
@@ -502,6 +506,10 @@
                                             <th @click="sortBy('wins')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
                                                 Wins
                                                 <span v-if="sortColumn === 'wins'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
+                                            </th>
+                                            <th @click="sortBy('draws')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
+                                                Draws
+                                                <span v-if="sortColumn === 'draws'">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
                                             </th>
                                             <th @click="sortBy('losses')" class="text-center p-4 font-semibold text-gray-700 cursor-pointer hover:bg-purple-200 transition-colors">
                                                 Losses
@@ -538,10 +546,20 @@
                                             <td class="p-4">
                                                 <div class="font-semibold text-gray-800">{{ player.name }}</div>
                                             </td>
+                                            <td class="text-center p-4">
+                                                <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-sm font-bold">
+                                                    {{ (player.wins * 3) + ((player.draws || 0) * 1) }}
+                                                </span>
+                                            </td>
                                             <td class="text-center p-4 font-medium text-gray-700">{{ player.gamesPlayed }}</td>
                                             <td class="text-center p-4">
                                                 <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
                                                     {{ player.wins }}
+                                                </span>
+                                            </td>
+                                            <td class="text-center p-4">
+                                                <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-medium">
+                                                    {{ player.draws || 0 }}
                                                 </span>
                                             </td>
                                             <td class="text-center p-4">
@@ -2116,7 +2134,7 @@
                     showTournamentTable: false, // Toggle tournament table view
 
                     // Table sorting (for tournament tables)
-                    sortColumn: 'pointDiff', // Default sort by point differential
+                    sortColumn: 'points', // Default sort by points (3 for win, 1 for draw)
                     sortDirection: 'desc',
 
                     // League table sorting
@@ -4106,6 +4124,7 @@
                                         name: player.name,
                                         gamesPlayed: 0,
                                         wins: 0,
+                                        draws: 0,
                                         losses: 0,
                                         pointsScored: 0,
                                         pointsConceded: 0
@@ -4124,6 +4143,8 @@
                                 playerStats[playerId].pointsConceded += match.scoreB || 0;
                                 if (match.winner === 'A') {
                                     playerStats[playerId].wins++;
+                                } else if (match.winner === 'Draw') {
+                                    playerStats[playerId].draws++;
                                 } else {
                                     playerStats[playerId].losses++;
                                 }
@@ -4137,6 +4158,8 @@
                                 playerStats[playerId].pointsConceded += match.scoreA || 0;
                                 if (match.winner === 'B') {
                                     playerStats[playerId].wins++;
+                                } else if (match.winner === 'Draw') {
+                                    playerStats[playerId].draws++;
                                 } else {
                                     playerStats[playerId].losses++;
                                 }
@@ -4145,8 +4168,10 @@
                     });
 
                     return Object.values(playerStats).sort((a, b) => {
-                        // Sort by wins first, then by point differential
-                        if (b.wins !== a.wins) return b.wins - a.wins;
+                        // Sort by points first (3 for win, 1 for draw), then by point differential
+                        const pointsA = (a.wins * 3) + (a.draws * 1);
+                        const pointsB = (b.wins * 3) + (b.draws * 1);
+                        if (pointsB !== pointsA) return pointsB - pointsA;
                         const diffA = a.pointsScored - a.pointsConceded;
                         const diffB = b.pointsScored - b.pointsConceded;
                         return diffB - diffA;
@@ -4202,6 +4227,10 @@
                                 valA = a.name.toLowerCase();
                                 valB = b.name.toLowerCase();
                                 break;
+                            case 'points':
+                                valA = (a.wins * 3) + ((a.draws || 0) * 1);
+                                valB = (b.wins * 3) + ((b.draws || 0) * 1);
+                                break;
                             case 'games':
                                 valA = a.gamesPlayed;
                                 valB = b.gamesPlayed;
@@ -4209,6 +4238,10 @@
                             case 'wins':
                                 valA = a.wins;
                                 valB = b.wins;
+                                break;
+                            case 'draws':
+                                valA = a.draws || 0;
+                                valB = b.draws || 0;
                                 break;
                             case 'losses':
                                 valA = a.losses;
@@ -4223,9 +4256,13 @@
                                 valB = b.pointsConceded;
                                 break;
                             case 'pointDiff':
-                            default:
                                 valA = (a.pointsScored - a.pointsConceded);
                                 valB = (b.pointsScored - b.pointsConceded);
+                                break;
+                            default:
+                                // Default to sorting by points (3 for win, 1 for draw)
+                                valA = (a.wins * 3) + ((a.draws || 0) * 1);
+                                valB = (b.wins * 3) + ((b.draws || 0) * 1);
                                 break;
                         }
 
