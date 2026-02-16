@@ -4010,7 +4010,7 @@
                         teamB: match.teamB,
                         scoreA: scoreA,
                         scoreB: scoreB,
-                        winner: scoreA > scoreB ? 'A' : 'B',
+                        winner: scoreA > scoreB ? 'A' : scoreA < scoreB ? 'B' : 'Draw',
                         processed: false,
                         notes: match.notes || ''
                     };
@@ -4065,7 +4065,7 @@
                         teamB: [...schedule.teamB],
                         scoreA: scoreA,
                         scoreB: scoreB,
-                        winner: scoreA > scoreB ? 'A' : 'B',
+                        winner: scoreA > scoreB ? 'A' : scoreA < scoreB ? 'B' : 'Draw',
                         rounds: JSON.parse(JSON.stringify(this.roundScores[schedule.id])), // Store round details
                         processed: false,
                         notes: schedule.notes || ''
